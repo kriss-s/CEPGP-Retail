@@ -4,26 +4,26 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 	CEPGP_Info.LastRun.DistSB = GetTime();
 	local call = CEPGP_Info.LastRun.DistSB;
 	local quit = false;
-	for name, _ in pairs(CEPGP_itemsTable) do
+	for name, _ in pairs(CEPGP_Info.Loot.ItemsTable) do
 		local roll = math.ceil(math.random(0, 100));
 		local EP, GP;
-		if CEPGP_roster[name] then
+		if CEPGP_Info.Guild.Roster[name] then
 			local index = CEPGP_getIndex(name);
 			EP, GP = CEPGP_getEPGP(name, index);
 			GP = math.max(math.floor(GP), CEPGP.GP.Min);
 			tempTable[count] = {
 				[1] = name,
-				[2] = CEPGP_roster[name][2], --Class
-				[3] = CEPGP_roster[name][3], --Rank
-				[4] = CEPGP_roster[name][4], --RankIndex
+				[2] = CEPGP_Info.Guild.Roster[name][2], --Class
+				[3] = CEPGP_Info.Guild.Roster[name][3], --Rank
+				[4] = CEPGP_Info.Guild.Roster[name][4], --RankIndex
 				[5] = EP,
 				[6] = GP,
 				[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
-				[8] = CEPGP_itemsTable[name][1] or "noitem",
-				[9] = CEPGP_itemsTable[name][2] or "noitem",
-				[10] = CEPGP_roster[name][7], --className in English
-				[11] = CEPGP_itemsTable[name][3], -- Loot response
-				[12] = CEPGP_itemsTable[name][4]
+				[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
+				[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
+				[10] = CEPGP_Info.Guild.Roster[name][7], --className in English
+				[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
+				[12] = CEPGP_Info.Loot.ItemsTable[name][4]
 			};
 		else
 			local index = CEPGP_getIndex(name);
@@ -38,11 +38,11 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 					[5] = EP,
 					[6] = GP,
 					[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
-					[8] = CEPGP_itemsTable[name][1] or "noitem",
-					[9] = CEPGP_itemsTable[name][2] or "noitem",
+					[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
+					[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
 					[10] = classFileName,
-					[11] = CEPGP_itemsTable[name][3], -- Loot response
-					[12] = CEPGP_itemsTable[name][4]
+					[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
+					[12] = CEPGP_Info.Loot.ItemsTable[name][4]
 				};
 			else
 				EP = 0;
@@ -61,11 +61,11 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 							[5] = EP,
 							[6] = GP,
 							[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
-							[8] = CEPGP_itemsTable[name][1] or "noitem",
-							[9] = CEPGP_itemsTable[name][2] or "noitem",
+							[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
+							[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
 							[10] = classFile,
-							[11] = CEPGP_itemsTable[name][3], -- Loot response
-							[12] = CEPGP_itemsTable[name][4]
+							[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
+							[12] = CEPGP_Info.Loot.ItemsTable[name][4]
 						};
 					end
 				end
@@ -315,7 +315,7 @@ function CEPGP_UpdateGuildScrollBar()
 	local quit = false;
 	local tempTable = {};
 	local count = 0;
-	for name, v in pairs(CEPGP_roster) do
+	for name, v in pairs(CEPGP_Info.Guild.Roster) do
 		count = count + 1;
 		local index = CEPGP_getIndex(name);
 		local EP, GP = CEPGP_getEPGP(name, index)
@@ -333,7 +333,7 @@ function CEPGP_UpdateGuildScrollBar()
 	tempTable = CEPGP_tSort(tempTable, CEPGP_Info.Sorting.Guild[1], CEPGP_Info.Sorting.Guild[2]);
 	local kids = {_G["CEPGP_guild_scrollframe_container"]:GetChildren()};
 	for index, child in ipairs(kids) do
-		if index > CEPGP_ntgetn(CEPGP_roster) then
+		if index > CEPGP_ntgetn(CEPGP_Info.Guild.Roster) then
 			child:Hide();
 			child = nil;
 		end
@@ -386,29 +386,29 @@ function CEPGP_UpdateRaidScrollBar()
 	CEPGP_Info.LastRun.RaidSB = GetTime();
 	local call = CEPGP_Info.LastRun.RaidSB;
 	local tempTable = {};
-	for i = 1, CEPGP_ntgetn(CEPGP_raidRoster) do
+	for i = 1, CEPGP_ntgetn(CEPGP_Info.Raid.Roster) do
 		tempTable[i] = {
-			[1] = CEPGP_raidRoster[i][1], --Name
-			[2] = CEPGP_raidRoster[i][2], --Class
-			[3] = CEPGP_raidRoster[i][3], --Rank
-			[4] = CEPGP_raidRoster[i][4], --RankIndex
-			[5] = CEPGP_raidRoster[i][5], --EP
-			[6] = CEPGP_raidRoster[i][6], --GP
-			[7] = CEPGP_raidRoster[i][7], --PR
-			[8] = CEPGP_raidRoster[i][8]  --Class in English
+			[1] = CEPGP_Info.Raid.Roster[i][1], --Name
+			[2] = CEPGP_Info.Raid.Roster[i][2], --Class
+			[3] = CEPGP_Info.Raid.Roster[i][3], --Rank
+			[4] = CEPGP_Info.Raid.Roster[i][4], --RankIndex
+			[5] = CEPGP_Info.Raid.Roster[i][5], --EP
+			[6] = CEPGP_Info.Raid.Roster[i][6], --GP
+			[7] = CEPGP_Info.Raid.Roster[i][7], --PR
+			[8] = CEPGP_Info.Raid.Roster[i][8]  --Class in English
 		};
 		
 	end
 	tempTable = CEPGP_tSort(tempTable, CEPGP_Info.Sorting.Raid[1], CEPGP_Info.Sorting.Raid[2]);
 	local kids = {_G["CEPGP_raid_scrollframe_container"]:GetChildren()};
 	for index, child in ipairs(kids) do
-		if index > CEPGP_ntgetn(CEPGP_raidRoster) then
+		if index > CEPGP_ntgetn(CEPGP_Info.Raid.Roster) then
 			child:Hide();
 			--child = nil;
 		end
 	end
 	for i = 1, CEPGP_ntgetn(tempTable) do
-		if CEPGP_Info.LastRun.RaidSB ~= call or #tempTable ~= #CEPGP_raidRoster then
+		if CEPGP_Info.LastRun.RaidSB ~= call or #tempTable ~= #CEPGP_Info.Raid.Roster then
 			return;
 		end
 		
@@ -455,23 +455,23 @@ function CEPGP_UpdateVersionScrollBar()
 		child:Hide();
 	end
 	if showOffline == "false" then
-		for i = 1, #CEPGP_groupVersion do
-			if CEPGP_groupVersion[i][2] ~= "Offline" then
+		for i = 1, #CEPGP_Info.Version.List do
+			if CEPGP_Info.Version.List[i][2] ~= "Offline" then
 				tempTable[#tempTable+1] = {
-					[1] = CEPGP_groupVersion[i][1],
-					[2] = CEPGP_groupVersion[i][2],
-					[3] = CEPGP_groupVersion[i][3],
-					[4] = CEPGP_groupVersion[i][4]
+					[1] = CEPGP_Info.Version.List[i][1],
+					[2] = CEPGP_Info.Version.List[i][2],
+					[3] = CEPGP_Info.Version.List[i][3],
+					[4] = CEPGP_Info.Version.List[i][4]
 				};
 			end
 		end
 	else
-		for i = 1, #CEPGP_groupVersion do
+		for i = 1, #CEPGP_Info.Version.List do
 			tempTable[i] = {
-				[1] = CEPGP_groupVersion[i][1],
-				[2] = CEPGP_groupVersion[i][2],
-				[3] = CEPGP_groupVersion[i][3],
-				[4] = CEPGP_groupVersion[i][4]
+				[1] = CEPGP_Info.Version.List[i][1],
+				[2] = CEPGP_Info.Version.List[i][2],
+				[3] = CEPGP_Info.Version.List[i][3],
+				[4] = CEPGP_Info.Version.List[i][4]
 			};
 		end
 	end
@@ -490,7 +490,7 @@ function CEPGP_UpdateVersionScrollBar()
 			end
 		end
 		_G["versionButton" .. i]:Show();
-		if CEPGP_vSearch == "GUILD" then
+		if CEPGP_Info.Version.ListSearch == "GUILD" then
 			local name = tempTable[i][1];
 			local classFile = tempTable[i][4];
 			local colour = CEPGP_Info.ClassColours[classFile];
@@ -748,7 +748,7 @@ function CEPGP_UpdateStandbyScrollBar()
 	for _, child in ipairs(kids) do
 		child:Hide();
 	end
-	for i = 1, CEPGP_ntgetn(CEPGP_standbyRoster) do
+	for i = 1, CEPGP_ntgetn(CEPGP.Standby.Roster) do
 		if not _G["StandbyButton" .. i] then
 			local frame = CreateFrame('Button', "StandbyButton" .. i, _G["CEPGP_standby_scrollframe_container"], "StandbyButtonTemplate");
 			if i > 1 then
@@ -757,9 +757,9 @@ function CEPGP_UpdateStandbyScrollBar()
 				_G["StandbyButton" .. i]:SetPoint("TOPLEFT", _G["CEPGP_standby_scrollframe_container"], "TOPLEFT", 0, -10);
 			end
 		end
-		local _, _, rank, rankIndex, oNote, _, classFile = CEPGP_getGuildInfo(CEPGP_standbyRoster[i][1]);
+		local _, _, rank, rankIndex, oNote, _, classFile = CEPGP_getGuildInfo(CEPGP.Standby.Roster[i][1]);
 		local online = true;
-		local name = CEPGP_standbyRoster[i][1];
+		local name = CEPGP.Standby.Roster[i][1];
 		local index = CEPGP_getIndex(name);
 		local EP, GP = CEPGP_getEPGP(name, index);
 		if not EP then EP = 0; end
@@ -770,14 +770,14 @@ function CEPGP_UpdateStandbyScrollBar()
 			online = false;
 		end
 		tempTable[i] = {
-			[1] = CEPGP_standbyRoster[i][1], --name
-			[2] = CEPGP_standbyRoster[i][2], --class
-			[3] = CEPGP_standbyRoster[i][3], --rank
-			[4] = CEPGP_standbyRoster[i][4], --rankIndex
+			[1] = CEPGP.Standby.Roster[i][1], --name
+			[2] = CEPGP.Standby.Roster[i][2], --class
+			[3] = CEPGP.Standby.Roster[i][3], --rank
+			[4] = CEPGP.Standby.Roster[i][4], --rankIndex
 			[5] = EP, --EP
 			[6] = GP, --GP
 			[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
-			[8] = CEPGP_standbyRoster[i][8], --ClassFile
+			[8] = CEPGP.Standby.Roster[i][8], --ClassFile
 			[9] = online --Online
 		};
 		local colour;
@@ -835,20 +835,20 @@ function CEPGP_UpdateAttendanceScrollBar()
 	local size;
 	local sbCount = 1;
 	local count = 1;
-	if CEPGP_snapshot then 
-		size = #CEPGP_raid_logs[CEPGP_snapshot]-1;
+	if CEPGP_Info.Attendance.SelectedSnapshot then 
+		size = #CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot]-1;
 	--else
-		--size = CEPGP_ntgetn(CEPGP_roster)-CEPGP_Info.NumExcluded;
+		--size = CEPGP_ntgetn(CEPGP_Info.Guild.Roster)-CEPGP_Info.NumExcluded;
 	end
-	if CEPGP_snapshot then
+	if CEPGP_Info.Attendance.SelectedSnapshot then
 		for i = 1, size do
 			local standby = false;
-			if CEPGP_snapshot then
-				if type(CEPGP_raid_logs[CEPGP_snapshot][i+1]) == "table" then
-					name = CEPGP_raid_logs[CEPGP_snapshot][i+1][1];
-					standby = CEPGP_raid_logs[CEPGP_snapshot][i+1][2];
+			if CEPGP_Info.Attendance.SelectedSnapshot then
+				if type(CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1]) == "table" then
+					name = CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1][1];
+					standby = CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1][2];
 				else
-					name = CEPGP_raid_logs[CEPGP_snapshot][i+1];
+					name = CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1];
 				end
 			else
 				name = CEPGP_indexToName(i);
@@ -894,7 +894,7 @@ function CEPGP_UpdateAttendanceScrollBar()
 			end
 		end
 	else
-		for name, v in pairs(CEPGP_roster) do
+		for name, v in pairs(CEPGP_Info.Guild.Roster) do
 			total, week, fn, month, twoMon, threeMon = CEPGP_calcAttendance(name);
 			index, class, rank, rankIndex, _, _, classFile = CEPGP_getGuildInfo(name);
 			if not index then
@@ -1227,7 +1227,7 @@ function CEPGP_UpdateLogScrollBar()
 	local quit = false;
 
 	local logs = {};
-	for _, data in ipairs(CEPGP.Log) do
+	for _, data in ipairs(CEPGP_Info.Logs) do
 		table.insert(logs, data);
 	end
 	

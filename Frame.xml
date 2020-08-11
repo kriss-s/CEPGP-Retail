@@ -39,7 +39,7 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_toggleFrame("CEPGP_guild");
-						CEPGP_mode = "guild";
+						CEPGP_Info.Mode = "guild";
 						CEPGP_populateFrame();
 					</OnClick>
 				</Scripts>
@@ -64,7 +64,7 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_toggleFrame("CEPGP_raid");
-						CEPGP_mode = "raid";
+						CEPGP_Info.Mode = "raid";
 						CEPGP_populateFrame();
 					</OnClick>
 				</Scripts>
@@ -112,7 +112,7 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_toggleFrame("CEPGP_loot");
-						CEPGP_mode = "loot";
+						CEPGP_Info.Mode = "loot";
 						CEPGP_cleanTable();
 						CEPGP_LootFrame_Update();
 					</OnClick>
@@ -1008,7 +1008,9 @@
 								local player, class, colouredName;
 								local highestRoll = 0;
 								local gp = math.floor(CEPGP_distribute_GP_value:GetText());
-								for name, v in pairs(CEPGP_itemsTable) do
+								local link = select(2, GetItemInfo(CEPGP_Info.Loot.DistributionID));
+								
+								for name, v in pairs(CEPGP_Info.Loot.ItemsTable) do
 									if v[4] then
 										if v[4] > highestRoll then
 											player = name;
@@ -1019,10 +1021,10 @@
 								
 								if highestRoll == 0 then return; end
 								
-								if CEPGP_roster[player] then
-									class = CEPGP_roster[player][7];
+								if CEPGP_Info.Guild.Roster[player] then
+									class = CEPGP_Info.Guild.Roster[player][7];
 								else
-									for index, v in ipairs(CEPGP_raidRoster) do
+									for index, v in ipairs(CEPGP_Info.Raid.Roster) do
 										if v[1] == player then
 											class = v[8];
 											break;
@@ -1030,12 +1032,12 @@
 									end
 								end
 																
-								CEPGP_distPlayer = player;
+								CEPGP_Info.DistTarget = player;
 								
 								colouredName = CEPGP_encodeClassString(class, player);
 								
 								CEPGP_roll_award_confirm:Show();
-								CEPGP_roll_award_confirm_desc:SetText("Would you like to award " .. CEPGP_distItemLink .. "\nto " .. colouredName .. " for " .. gp .. "GP with a roll of " .. highestRoll .. "?");
+								CEPGP_roll_award_confirm_desc:SetText("Would you like to award " .. link .. "\nto " .. colouredName .. " for " .. gp .. "GP with a roll of " .. highestRoll .. "?");
 							</OnClick>
 						</Scripts>
 					</Button>
@@ -1374,21 +1376,20 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_rosterUpdate("GUILD_ROSTER_UPDATE");
-						CEPGP_vInfo = {};
+						CEPGP_Info.Version.List = {};
 						CEPGP_SendAddonMsg("version-check", "RAID");
-						CEPGP_vSearch = "RAID";
-						CEPGP_groupVersion = {};
+						CEPGP_Info.Version.ListSearch = "RAID";
 						for i = 1, GetNumGroupMembers() do
 							local name, _, _, _, class, classFile, _, online = GetRaidRosterInfo(i);
 							if online then
-								CEPGP_groupVersion[i] = {
+								CEPGP_Info.Version.List[i] = {
 									[1] = name,
 									[2] = "Addon not enabled",
 									[3] = class,
 									[4] = classFile
 								};
 							else
-								CEPGP_groupVersion[i] = {
+								CEPGP_Info.Version.List[i] = {
 									[1] = name,
 									[2] = "Offline",
 									[3] = class,
@@ -1411,24 +1412,23 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						CEPGP_vInfo = {};
-						CEPGP_vSearch = "GUILD";
+						CEPGP_Info.Version.List = {};
+						CEPGP_Info.Version.ListSearch = "GUILD";
 						CEPGP_SendAddonMsg("version-check", "GUILD");
-						CEPGP_groupVersion = {};
 						for i = 1, GetNumGuildMembers() do
 							local name, _, _, _, class, _, _, _, online, _, classFileName = GetGuildRosterInfo(i);
 							if string.find(name, "-") then
 								name = string.sub(name, 0, string.find(name, "-")-1);
 							end
 							if online then
-								CEPGP_groupVersion[i] = {
+								CEPGP_Info.Version.List[i] = {
 									[1] = name,
 									[2] = "Addon not enabled",
 									[3] = class,
 									[4] = classFileName
 								};
 							else
-								CEPGP_groupVersion[i] = {
+								CEPGP_Info.Version.List[i] = {
 									[1] = name,
 									[2] = "Offline",
 									[3] = class,
@@ -1584,14 +1584,14 @@
 			<OnShow>
 			</OnShow>
 			<OnEvent>
-				if CEPGP_distPlayer ~= "" then
+				if CEPGP_Info.DistTarget ~= "" then
 					local eCode = select(1, ...);
 					CEPGP_distribute_popup_OnEvent(eCode);
 				end
 			</OnEvent>
 			<OnHide>
 				CEPGP_distribute_popup_title:SetText("");
-				CEPGP_distPlayer = "";
+				CEPGP_Info.DistTarget = "";
 			</OnHide>
 		</Scripts>
 	</Frame>
@@ -2303,8 +2303,8 @@
 						CEPGP_saveStandings(CEPGP_guild_log_save_name:GetText());
 					</OnClick>
 					<OnHide>
-						CEPGP_overwritelog = false;
-						CEPGP_recordholder = nil;
+						CEPGP_Info.OverwriteLog = false;
+						CEPGP_Info.RecordExists = nil;
 					</OnHide>
 				</Scripts>
 			</Button>
@@ -2465,7 +2465,7 @@
 						CEPGP_Info.IgnoreUpdates = true;
 						
 						C_Timer.After(0.1, function()
-							if RECORDS[name] ~= nil and CEPGP_confirmrestore then
+							if RECORDS[name] ~= nil and CEPGP_Info.Backups.ConfirmRestore then
 								local i = 0;
 								C_Timer.NewTicker(0.0001, function()
 									i = i + 1;
@@ -2477,19 +2477,19 @@
 										update();
 									end
 								end, GetNumGuildMembers());
-								CEPGP_confirmrestore = false;
+								CEPGP_Info.Backups.ConfirmRestore = false;
 								HideUIPanel(CEPGP_restore_guild_logs);
 							elseif RECORDS[name] ~= nil then
 								CEPGP_print("Are you sure you would like to restore guild EPGP standings from record [" .. name .. "]?");
 								CEPGP_print("This action CANNOT be undone. Press confirm again to restore.");
-								CEPGP_confirmrestore = true;
+								CEPGP_Info.Backups.ConfirmRestore = true;
 							else
 								CEPGP_print("Record [" .. name .. "] could not be found", true);
 							end
 						end);
 					</OnClick>
 					<OnHide>
-						CEPGP_confirmrestore = false;
+						CEPGP_Info.Backups.ConfirmRestore = false;
 					</OnHide>
 				</Scripts>
 			</Button>
@@ -2720,7 +2720,7 @@
 						
 						local vInfo = {};
 						
-						for _, data in ipairs(CEPGP_groupVersion) do
+						for _, data in ipairs(CEPGP_Info.Version.List) do
 							if data[1] == name then
 								vInfo = CEPGP_split(data[2], ".");
 								break;
@@ -2749,7 +2749,7 @@
 									CEPGP_UpdateOverrideScrollBar();
 								end
 								if attr == "Standby" then
-									CEPGP_standbyRoster = {};
+									CEPGP.Standby.Roster = {};
 									CEPGP.Standby.Roster = {};
 									CEPGP_UpdateStandbyScrollBar();
 								end
@@ -3016,11 +3016,11 @@
 						end
 						if CEPGP_override_item_name:GetText() ~= "" then
 							local item = CEPGP_standardiseString(CEPGP_override_item_name:GetText());
-							if (OVERRIDE_INDEX[item] and CEPGP_override_confirm) or not OVERRIDE_INDEX[item] then
+							if (OVERRIDE_INDEX[item] and CEPGP_Info.Override.ConfirmOverwrite) or not OVERRIDE_INDEX[item] then
 								OVERRIDE_INDEX[item] = gp;
 								CEPGP_print("GP value for " .. item .. " has been overriden to " .. gp);
 								CEPGP_UpdateOverrideScrollBar();
-								CEPGP_override_confirm = false;
+								CEPGP_Info.Override.ConfirmOverwrite = false;
 								CEPGP_override_item_name:SetText("");
 								CEPGP_override_item_name:ClearFocus();
 								CEPGP_override_item_gp:SetText("");
@@ -3028,7 +3028,7 @@
 								return;
 							else
 								CEPGP_print(item .. " has already been overridden to " .. OVERRIDE_INDEX[item] .. ". Click add again to change self to " .. gp);
-								CEPGP_override_confirm = true;
+								CEPGP_Info.Override.ConfirmOverwrite = true;
 							end
 						elseif CEPGP_override_item_id:GetText() ~= "" then
 							local id = tonumber(CEPGP_override_item_id:GetText());
@@ -3037,11 +3037,11 @@
 								local item = Item:CreateFromItemID(id);
 								item:ContinueOnItemLoad(function()
 									link = CEPGP_getItemLink(id);
-									if (OVERRIDE_INDEX[link] and CEPGP_override_confirm) or not OVERRIDE_INDEX[link] then
+									if (OVERRIDE_INDEX[link] and CEPGP_Info.Override.ConfirmOverwrite) or not OVERRIDE_INDEX[link] then
 										OVERRIDE_INDEX[link] = gp;
 										CEPGP_print("GP value for " .. link .. " |c006969FFhas been overriden to " .. gp);
 										CEPGP_UpdateOverrideScrollBar();
-										CEPGP_override_confirm = false;
+										CEPGP_Info.Override.ConfirmOverwrite = false;
 										CEPGP_override_item_id:SetText("");
 										CEPGP_override_item_id:ClearFocus();
 										CEPGP_override_item_name:SetText("");
@@ -3051,15 +3051,15 @@
 										return;
 									else
 										CEPGP_print(link .. " has already been overridden to " .. OVERRIDE_INDEX[link] .. "|c006969FF. Click add again to change self to " .. gp);
-										CEPGP_override_confirm = true;
+										CEPGP_Info.Override.ConfirmOverwrite = true;
 									end
 								end);
 							elseif CEPGP_itemExists(id) then
-								if (OVERRIDE_INDEX[link] and CEPGP_override_confirm) or not OVERRIDE_INDEX[link] then
+								if (OVERRIDE_INDEX[link] and CEPGP_Info.Override.ConfirmOverwrite) or not OVERRIDE_INDEX[link] then
 									OVERRIDE_INDEX[link] = gp;
 									CEPGP_print("GP value for " .. link .. " |c006969FFhas been overriden to " .. gp);
 									CEPGP_UpdateOverrideScrollBar();
-									CEPGP_override_confirm = false;
+									CEPGP_Info.Override.ConfirmOverwrite = false;
 									CEPGP_override_item_id:SetText("");
 									CEPGP_override_item_id:ClearFocus();
 									CEPGP_override_item_name:SetText("");
@@ -3069,7 +3069,7 @@
 									return;
 								else
 									CEPGP_print(link .. " has already been overridden to " .. OVERRIDE_INDEX[link] .. "|c006969FF. Click add again to change self to " .. gp);
-									CEPGP_override_confirm = true;
+									CEPGP_Info.Override.ConfirmOverwrite = true;
 								end
 							else
 								CEPGP_print("No item exists for item ID " .. id, true);
@@ -3099,7 +3099,7 @@
 					</OnClick>
 				</Scripts>
 			</Button>
-			<Button name="CEPGP_override_confirm" inherits="GameMenuButtonTemplate" text="Add Override">
+			<Button name="CEPGP_Info.Override.ConfirmOverwrite" inherits="GameMenuButtonTemplate" text="Add Override">
 				<Size>
 					<AbsDimension x="150" y="30"/>
 				</Size>
@@ -3127,12 +3127,12 @@
 							local item = CEPGP_standardiseString(CEPGP_override_item_name:GetText());
 							local _, iString = GetItemInfo(item);
 							if iString then item = iString; end
-							if (OVERRIDE_INDEX[item] and CEPGP_override_confirm) or not OVERRIDE_INDEX[item] then
+							if (OVERRIDE_INDEX[item] and CEPGP_Info.Override.ConfirmOverwrite) or not OVERRIDE_INDEX[item] then
 								OVERRIDE_INDEX[item] = gp;
 								CEPGP.Overrides[item] = gp;
 								CEPGP_print("GP value for " .. item .. " has been overriden to " .. gp);
 								CEPGP_UpdateOverrideScrollBar();
-								CEPGP_override_confirm = false;
+								CEPGP_Info.Override.ConfirmOverwrite = false;
 								CEPGP_override_item_name:SetText("");
 								CEPGP_override_item_name:ClearFocus();
 								CEPGP_override_item_gp:SetText("");
@@ -3140,7 +3140,7 @@
 								return;
 							else
 								CEPGP_print(item .. " has already been overridden to " .. OVERRIDE_INDEX[item] .. ". Click add again to change self to " .. gp);
-								CEPGP_override_confirm = true;
+								CEPGP_Info.Override.ConfirmOverwrite = true;
 							end
 						elseif CEPGP_override_item_id:GetText() ~= "" then
 							local id = tonumber(CEPGP_override_item_id:GetText());
@@ -3149,12 +3149,12 @@
 								local item = Item:CreateFromItemID(id);
 								item:ContinueOnItemLoad(function()
 									_, link = GetItemInfo(id);
-									if (OVERRIDE_INDEX[link] and CEPGP_override_confirm) or not OVERRIDE_INDEX[link] then
+									if (OVERRIDE_INDEX[link] and CEPGP_Info.Override.ConfirmOverwrite) or not OVERRIDE_INDEX[link] then
 										OVERRIDE_INDEX[link] = gp;
 										CEPGP.Overrides[link] = gp;
 										CEPGP_print("GP value for " .. link .. " |c006969FFhas been overriden to " .. gp);
 										CEPGP_UpdateOverrideScrollBar();
-										CEPGP_override_confirm = false;
+										CEPGP_Info.Override.ConfirmOverwrite = false;
 										CEPGP_override_item_id:SetText("");
 										CEPGP_override_item_id:ClearFocus();
 										CEPGP_override_item_name:SetText("");
@@ -3164,16 +3164,16 @@
 										return;
 									else
 										CEPGP_print(link .. " has already been overridden to " .. OVERRIDE_INDEX[link] .. "|c006969FF. Click add again to change self to " .. gp);
-										CEPGP_override_confirm = true;
+										CEPGP_Info.Override.ConfirmOverwrite = true;
 									end
 								end);
 							elseif CEPGP_itemExists(id) then
-								if (OVERRIDE_INDEX[link] and CEPGP_override_confirm) or not OVERRIDE_INDEX[link] then
+								if (OVERRIDE_INDEX[link] and CEPGP_Info.Override.ConfirmOverwrite) or not OVERRIDE_INDEX[link] then
 									OVERRIDE_INDEX[link] = gp;
 									CEPGP.Overrides[link] = gp;
 									CEPGP_print("GP value for " .. link .. " |c006969FFhas been overriden to " .. gp);
 									CEPGP_UpdateOverrideScrollBar();
-									CEPGP_override_confirm = false;
+									CEPGP_Info.Override.ConfirmOverwrite = false;
 									CEPGP_override_item_id:SetText("");
 									CEPGP_override_item_id:ClearFocus();
 									CEPGP_override_item_name:SetText("");
@@ -3183,7 +3183,7 @@
 									return;
 								else
 									CEPGP_print(link .. " has already been overridden to " .. OVERRIDE_INDEX[link] .. "|c006969FF. Click add again to change self to " .. gp);
-									CEPGP_override_confirm = true;
+									CEPGP_Info.Override.ConfirmOverwrite = true;
 								end
 							else
 								CEPGP_print("No item exists for item ID " .. id, true);
@@ -3193,7 +3193,7 @@
 					<OnHide>
 						CEPGP_override_item_name:SetText("");
 						CEPGP_override_item_gp:SetText("");
-						CEPGP_override_confirm = false;
+						CEPGP_Info.Override.ConfirmOverwrite = false;
 					</OnHide>
 				</Scripts>
 			</Button>
@@ -3353,19 +3353,19 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						if CEPGP_traffic_clear then
+						if CEPGP_Info.Traffic.ConfirmClear then
 							TRAFFIC = {};
 							CEPGP_UpdateTrafficScrollBar();
 							CEPGP_print("EPGP traffic wiped");
-							CEPGP_traffic_clear = false;
+							CEPGP_Info.Traffic.ConfirmClear = false;
 						else
 							CEPGP_print("You are trying to clear your EPGP traffic log. This action cannot be reversed.");
 							CEPGP_print("Press Clear EPGP traffic again to confirm");
-							CEPGP_traffic_clear = true;
+							CEPGP_Info.Traffic.ConfirmClear = true;
 						end
 					</OnClick>
 					<OnHide>
-						CEPGP_traffic_clear = false;
+						CEPGP_Info.Traffic.ConfirmClear = false;
 					</OnHide>
 				</Scripts>
 			</Button>
@@ -4027,11 +4027,11 @@
 							return;
 						end
 						if UIDropDownMenu_GetSelectedValue(CEPGP_attendance_dropdown) == 0 then
-							CEPGP_snapshot = nil;
+							CEPGP_Info.Attendance.SelectedSnapshot = nil;
 							CEPGP_attendance_desc:SetText("Snapshot Summary");
 						else
-							CEPGP_snapshot = UIDropDownMenu_GetSelectedValue(CEPGP_attendance_dropdown);
-							CEPGP_attendance_desc:SetText("Viewing Snapshot: " .. date("%A %d %B, %Y, %H:%M", CEPGP_raid_logs[CEPGP_snapshot][1]));
+							CEPGP_Info.Attendance.SelectedSnapshot = UIDropDownMenu_GetSelectedValue(CEPGP_attendance_dropdown);
+							CEPGP_attendance_desc:SetText("Viewing Snapshot: " .. date("%A %d %B, %Y, %H:%M", CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][1]));
 						end
 						CEPGP_UpdateAttendanceScrollBar();
 					</OnClick>
@@ -4427,8 +4427,8 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						CEPGP_Info.LootGUID = CEPGP_Info.LootGUID or "";	<!--	Useful for if the loot master doesn't have the latest version	-->
-						CEPGP_SendAddonMsg("LootRsp;1;" .. CEPGP_Info.LootGUID, "RAID");
+						CEPGP_Info.Loot.GUID = CEPGP_Info.Loot.GUID or "";	<!--	Useful for if the loot master doesn't have the latest version	-->
+						CEPGP_SendAddonMsg("LootRsp;1;" .. CEPGP_Info.Loot.GUID, "RAID");
 						CEPGP_respond:Hide();
 					</OnClick>
 				</Scripts>
@@ -4447,8 +4447,8 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						CEPGP_Info.LootGUID = CEPGP_Info.LootGUID or "";
-						CEPGP_SendAddonMsg("LootRsp;2;" .. CEPGP_Info.LootGUID, "RAID");
+						CEPGP_Info.Loot.GUID = CEPGP_Info.Loot.GUID or "";
+						CEPGP_SendAddonMsg("LootRsp;2;" .. CEPGP_Info.Loot.GUID, "RAID");
 						CEPGP_respond:Hide();
 					</OnClick>
 				</Scripts>
@@ -4467,8 +4467,8 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						CEPGP_Info.LootGUID = CEPGP_Info.LootGUID or "";
-						CEPGP_SendAddonMsg("LootRsp;3;" .. CEPGP_Info.LootGUID, "RAID");
+						CEPGP_Info.Loot.GUID = CEPGP_Info.Loot.GUID or "";
+						CEPGP_SendAddonMsg("LootRsp;3;" .. CEPGP_Info.Loot.GUID, "RAID");
 						CEPGP_respond:Hide();
 					</OnClick>
 				</Scripts>
@@ -4487,8 +4487,8 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						CEPGP_Info.LootGUID = CEPGP_Info.LootGUID or "";
-						CEPGP_SendAddonMsg("LootRsp;4;" .. CEPGP_Info.LootGUID, "RAID");
+						CEPGP_Info.Loot.GUID = CEPGP_Info.Loot.GUID or "";
+						CEPGP_SendAddonMsg("LootRsp;4;" .. CEPGP_Info.Loot.GUID, "RAID");
 						CEPGP_respond:Hide();
 					</OnClick>
 				</Scripts>
@@ -4507,8 +4507,8 @@
 				<Scripts>
 					<OnClick>
 						PlaySound(799);
-						CEPGP_Info.LootGUID = CEPGP_Info.LootGUID or "";
-						CEPGP_SendAddonMsg("LootRsp;6;" .. CEPGP_Info.LootGUID, "RAID");
+						CEPGP_Info.Loot.GUID = CEPGP_Info.Loot.GUID or "";
+						CEPGP_SendAddonMsg("LootRsp;6;" .. CEPGP_Info.Loot.GUID, "RAID");
 						CEPGP_respond:Hide();
 					</OnClick>
 				</Scripts>
@@ -4857,7 +4857,7 @@
 		<Scripts>
 			<OnShow>
 				CEPGP_Info.IgnoreUpdates = true;
-				if (GetNumGuildMembers() - CEPGP_Info.NumExcluded) > CEPGP_ntgetn(CEPGP_roster) and CEPGP_Info.Polling then
+				if (GetNumGuildMembers() - CEPGP_Info.NumExcluded) > CEPGP_ntgetn(CEPGP_Info.Guild.Roster) and CEPGP_Info.Polling then
 					CEPGP_export_dump:SetText("Scanning guild roster. Please wait...");
 					CEPGP_Info.RosterStack["Export"] = CEPGP_formatExport;
 					--table.insert(CEPGP_Info.RosterStack, CEPGP_formatExport);
@@ -5949,10 +5949,10 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_roll_award_confirm:Hide();
-						CEPGP_award = true;
-						CEPGP_rate = 1;
+						CEPGP_Info.Loot.GiveWithEPGP = true;
+						CEPGP_Info.Loot.AwardRate = 1;
 						CEPGP_distribute_popup:SetAttribute("responseName", "Highest Roll");
-						CEPGP_distGP = true;
+						CEPGP_Info.Loot.AwardGP = true;
 						CEPGP_distribute_popup_give();
 					</OnClick>
 				</Scripts>
@@ -5972,10 +5972,10 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_roll_award_confirm:Hide();
-						CEPGP_award = true;
-						CEPGP_rate = 1;
+						CEPGP_Info.Loot.GiveWithEPGP = true;
+						CEPGP_Info.Loot.AwardRate = 1;
 						CEPGP_distribute_popup:SetAttribute("responseName", "Highest Roll (Free)");
-						CEPGP_distGP = false;
+						CEPGP_Info.Loot.AwardGP = false;
 						CEPGP_distribute_popup_give();
 					</OnClick>
 				</Scripts>
@@ -5995,15 +5995,15 @@
 					<OnClick>
 						PlaySound(799);
 						CEPGP_roll_award_confirm:Hide();
-						CEPGP_distPlayer = "";
-						CEPGP_award = false;
+						CEPGP_Info.DistTarget = "";
+						CEPGP_Info.Loot.GiveWithEPGP = false;
 					</OnClick>
 				</Scripts>
 			</Button>
 		</Frames>
 		<Scripts>
 			<OnHide>
-				CEPGP_award = false;
+				CEPGP_Info.Loot.GiveWithEPGP = false;
 			</OnHide>
 		</Scripts>
 	</Frame>
@@ -6062,7 +6062,7 @@
 				local heading, content = CEPGP_changelog_heading, CEPGP_changelog_content;
 				heading:SetPoint("TOP", 0, -20);
 				content:SetPoint("TOPLEFT", 20, -40);
-				heading:SetText("Classic EPGP Version " .. CEPGP_Info.Version .. " " .. CEPGP_Info.Build .. " Changelog");
+				heading:SetText("Classic EPGP Version " .. CEPGP_Info.Version.Number .. " " .. CEPGP_Info.Version.Build .. " Changelog");
 				local info = "Bufixes:\n- Resolved a structural issue preventing loot from being announced on some clients\n- Resolved synchronisation issues between old and new variables\n- Resolved an issue preventing The Silithid Royalty EP and Auto Award status from being changed\n- Fixed a stack of initialisation issues\n- Players should no longer incorrectly get the message \"Guild roster is polling\" when attempting\nto execute actions\n- EP awards should no longer double up if both a main and alt are in the raid group\n\nChanges:\n- Added an addon message log for debugging purposes\n- Added exception catchers into the import/export functions\n- Added exception catchers to the EPGP modification functions";
 				content:SetText(info);
 				self:SetWidth(content:GetStringWidth()+40);
@@ -12332,12 +12332,12 @@
 						if self:GetChecked() then
 							CEPGP_standby_share = true;
 							CEPGP.Standby.Share = true;
-							local limit = #CEPGP_standbyRoster;
+							local limit = #CEPGP.Standby.Roster;
 							local count = 1;
-							--for _, t in pairs(CEPGP_standbyRoster) do
+							--for _, t in pairs(CEPGP.Standby.Roster) do
 							if limit > 0 then
 								C_Timer.NewTicker(1, function()
-									local t = CEPGP_standbyRoster[count];
+									local t = CEPGP.Standby.Roster[count];
 									local message = "StandbyListAdd;"..t[1]..";"..t[2]..";"..t[3]..";"..t[4]..";"..t[5]..";"..t[6]..";"..t[8];
 									CEPGP_SendAddonMsg(message, "RAID");
 									count = count + 1;
@@ -12579,7 +12579,7 @@
 						<Scripts>
 							<OnClick>
 								CEPGP_setCriteria(1, "Standby");
-								CEPGP_standbyRoster = CEPGP_tSort(CEPGP_standbyRoster, 1);
+								CEPGP.Standby.Roster = CEPGP_tSort(CEPGP.Standby.Roster, 1);
 								CEPGP_UpdateStandbyScrollBar();
 							</OnClick>
 						</Scripts>
@@ -12598,7 +12598,7 @@
 						<Scripts>
 							<OnClick>
 								CEPGP_setCriteria(2, "Standby");
-								CEPGP_standbyRoster = CEPGP_tSort(CEPGP_standbyRoster, 2);
+								CEPGP.Standby.Roster = CEPGP_tSort(CEPGP.Standby.Roster, 2);
 								CEPGP_UpdateStandbyScrollBar();
 							</OnClick>
 						</Scripts>
@@ -12617,7 +12617,7 @@
 						<Scripts>
 							<OnClick>
 								CEPGP_setCriteria(4, "Standby");
-								CEPGP_standbyRoster = CEPGP_tSort(CEPGP_standbyRoster, 4);
+								CEPGP.Standby.Roster = CEPGP_tSort(CEPGP.Standby.Roster, 4);
 								CEPGP_UpdateStandbyScrollBar();
 							</OnClick>
 						</Scripts>
@@ -12636,7 +12636,7 @@
 						<Scripts>
 							<OnClick>
 								CEPGP_setCriteria(5, "Standby");
-								CEPGP_standbyRoster = CEPGP_tSort(CEPGP_standbyRoster, 5);
+								CEPGP.Standby.Roster = CEPGP_tSort(CEPGP.Standby.Roster, 5);
 								CEPGP_UpdateStandbyScrollBar();
 							</OnClick>
 						</Scripts>
@@ -12655,7 +12655,7 @@
 						<Scripts>
 							<OnClick>
 								CEPGP_setCriteria(6, "Standby");
-								CEPGP_standbyRoster = CEPGP_tSort(CEPGP_standbyRoster, 6);
+								CEPGP.Standby.Roster = CEPGP_tSort(CEPGP.Standby.Roster, 6);
 								CEPGP_UpdateStandbyScrollBar();
 							</OnClick>
 						</Scripts>
@@ -12674,7 +12674,7 @@
 						<Scripts>
 							<OnClick>
 								CEPGP_setCriteria(7, "Standby");
-								CEPGP_standbyRoster = CEPGP_tSort(CEPGP_standbyRoster, 7);
+								CEPGP.Standby.Roster = CEPGP_tSort(CEPGP.Standby.Roster, 7);
 								CEPGP_UpdateStandbyScrollBar();
 							</OnClick>
 						</Scripts>
