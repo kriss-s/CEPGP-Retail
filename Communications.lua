@@ -2,7 +2,7 @@ local L = CEPGP_Locale:GetLocale("CEPGP")
 
 function CEPGP_IncAddonMsg(message, sender, channel)
 	if sender ~= UnitName("player") then
-		table.insert(CEPGP_Info.Logs, {time(), "received", sender, UnitName("player"), message, channel});	--	os.time, time since pc turned on (useful for millisecond precision)
+		table.insert(CEPGP.Log, {time(), "received", sender, UnitName("player"), message, channel});	--	os.time, time since pc turned on (useful for millisecond precision)
 	end
 	
 	local args = CEPGP_split(message, ";"); -- The broken down message, delimited by semi-colons
@@ -50,7 +50,7 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 			CEPGP_UpdateOverrideScrollBar();
 		end
 		
-		CEPGP.Standby.Roster = {};
+		CEPGP_standbyRoster = {};
 		CEPGP.Standby.Roster = {};
 		if CEPGP_standby_options:IsVisible() then
 			CEPGP_UpdateStandbyScrollBar();
@@ -81,10 +81,10 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 	end
 	
 	if args[1] == "CEPGP_setDistID" then
-		CEPGP_Info.Loot.DistributionID = args[2];
+		CEPGP_DistID = args[2];
 		
 	elseif args[1] == "CEPGP_setLootGUID" then
-		CEPGP_Info.Loot.GUID = args[2];
+		CEPGP_Info.LootGUID = args[2];
 	
 	elseif args[1] == UnitName("player") and args[2] == "distslot" then
 		--Recipient should see this
@@ -130,16 +130,17 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 		
 		
 	elseif args[2] == "receiving" then
+		table.insert(CEPGP_responses, sender);
 		local itemID = args[3];
 		local itemID2 = args[4];
 		local response, roll;
-		if CEPGP_Info.Loot.ItemsTable[sender] then
-			response = CEPGP_Info.Loot.ItemsTable[sender][3];
-			roll = CEPGP_Info.Loot.ItemsTable[sender][4];
+		if CEPGP_itemsTable[sender] then
+			response = CEPGP_itemsTable[sender][3];
+			roll = CEPGP_itemsTable[sender][4];
 		end
 		if not response and not CEPGP_show_passes then return; end
-		CEPGP_Info.Loot.ItemsTable[sender] = {};
-		CEPGP_Info.Loot.ItemsTable[sender] = {
+		CEPGP_itemsTable[sender] = {};
+		CEPGP_itemsTable[sender] = {
 			[1] = itemID,
 			[2] = itemID2,
 			[3] = response,
@@ -149,17 +150,17 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 	end
 		
 	if args[1] == UnitName("player") and args[2] == "versioncheck" then
-		local index = CEPGP_ntgetn(CEPGP_Info.Version.List);
+		local index = CEPGP_ntgetn(CEPGP_groupVersion);
 		if not index then index = 0; end
 		for i=1, index do
-			if CEPGP_Info.Version.List[i][1] == sender then
-				CEPGP_Info.Version.List[i][2] = args[3];
-				if CEPGP_Info.Guild.Roster[sender] then
-					CEPGP_Info.Version.List[i][3] = CEPGP_Info.Guild.Roster[sender][2];
+			if CEPGP_groupVersion[i][1] == sender then
+				CEPGP_groupVersion[i][2] = args[3];
+				if CEPGP_roster[sender] then
+					CEPGP_groupVersion[i][3] = CEPGP_roster[sender][2];
 				else
 					for x = 1, GetNumGroupMembers() do
 						if GetRaidRosterInfo(x) == sender then
-							_, _, _, _, CEPGP_Info.Version.List[i][3], CEPGP_Info.Version.List[i][4] = GetRaidRosterInfo(x);
+							_, _, _, _, CEPGP_groupVersion[i][3], CEPGP_groupVersion[i][4] = GetRaidRosterInfo(x);
 							break;
 						end
 					end
@@ -167,7 +168,7 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 				break;
 			end
 		end
-		CEPGP_Info.Version.List[sender] = args[3];
+		CEPGP_vInfo[sender] = args[3];
 		CEPGP_checkVersion(message);
 		CEPGP_UpdateVersionScrollBar();
 		
@@ -175,10 +176,10 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 	elseif message == "version-check" then
 		if not sender then return; end
 		CEPGP_updateGuild();
-		if CEPGP_Info.Guild.Roster[sender] then
-			CEPGP_SendAddonMsg(sender .. ";versioncheck;" .. CEPGP_Info.Version.Number .. "." .. CEPGP_Info.Version.Build, "GUILD");
+		if CEPGP_roster[sender] then
+			CEPGP_SendAddonMsg(sender .. ";versioncheck;" .. CEPGP_Info.Version .. "." .. CEPGP_Info.Build, "GUILD");
 		else
-			CEPGP_SendAddonMsg(sender .. ";versioncheck;" .. CEPGP_Info.Version.Number .. "." .. CEPGP_Info.Version.Build, "RAID");
+			CEPGP_SendAddonMsg(sender .. ";versioncheck;" .. CEPGP_Info.Version .. "." .. CEPGP_Info.Build, "RAID");
 		end
 	end
 		
@@ -206,10 +207,10 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 			CEPGP_Info.LootRespondants = CEPGP_Info.LootRespondants + 1;
 		end
 		if sender ~= UnitName("player") and ((CEPGP_show_passes and response == 6) or response ~= 6) then
-			CEPGP_Info.Loot.ItemsTable[player] = {};
-			CEPGP_Info.Loot.ItemsTable[player][3] = response;
+			CEPGP_itemsTable[player] = {};
+			CEPGP_itemsTable[player][3] = response;
 			if roll then
-				CEPGP_Info.Loot.ItemsTable[player][4] = tonumber(roll);
+				CEPGP_itemsTable[player][4] = tonumber(roll);
 			end
 			CEPGP_UpdateLootScrollBar(sort);
 		end
@@ -223,21 +224,21 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 		CEPGP_print(args[3]);
 		
 	elseif args[1] == "StandbyListAdd" and (UnitIsGroupAssistant("player") or UnitIsGroupLeader("player")) and sender ~= UnitName("player") then
-		for _, t in pairs(CEPGP.Standby.Roster) do -- Is the player already in the standby roster?
+		for _, t in pairs(CEPGP_standbyRoster) do -- Is the player already in the standby roster?
 			if t[1] == args[2] then
 				return;
 			end
 		end
-		for _, v in ipairs(CEPGP_Info.Raid.Roster) do -- Is the player part of your raid group?
+		for _, v in ipairs(CEPGP_raidRoster) do -- Is the player part of your raid group?
 			if args[2] == v[1] then
 				return;
 			end
 		end
-		if not CEPGP_Info.Guild.Roster[args[2]] then -- Player might not be part of your guild. This could happen if you're pugging with another guild and they use CEPGP
+		if not CEPGP_roster[args[2]] then -- Player might not be part of your guild. This could happen if you're pugging with another guild and they use CEPGP
 			return;
 		end
 		local player, class, rank, rankIndex, EP, GP, classFile = args[2], args[3], args[4], args[5], args[6], args[7], args[8];
-		CEPGP.Standby.Roster[#CEPGP.Standby.Roster+1] = {
+		CEPGP_standbyRoster[#CEPGP_standbyRoster+1] = {
 			[1] = player,
 			[2] = class,
 			[3] = rank,
@@ -250,9 +251,9 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 		CEPGP_UpdateStandbyScrollBar();
 		
 	elseif args[1] == "StandbyListRemove" and (UnitIsGroupAssistant("player") or UnitIsGroupLeader("player")) and sender ~= UnitName("player") then
-		for i, v in ipairs(CEPGP.Standby.Roster) do
+		for i, v in ipairs(CEPGP_standbyRoster) do
 			if v[1] == args[2] then
-				table.remove(CEPGP.Standby.Roster, i);
+				table.remove(CEPGP_standbyRoster, i);
 			end
 			break;
 		end
@@ -293,11 +294,11 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 		CEPGP_traffic_share:Disable();
 		CEPGP_print(sender .. " is sharing their traffic log with you. This process will start in 10 seconds");
 		CEPGP_traffic_share_status:SetText("Preparing to receive traffic entries");
-		CEPGP_Info.Traffic.ImportEntries = {};
+		CEPGP_Info.TrafficImport = {};
 	
 	elseif args[1] == "CEPGP_TRAFFICSyncStop" and sender ~= UnitName("player") and CEPGP_Info.SharingTraffic then
 		local success, failMsg = pcall(function()
-			CEPGP_print(#CEPGP_Info.Traffic.ImportEntries .. " Traffic Entries Received. Processing..");
+			CEPGP_print(#CEPGP_Info.TrafficImport .. " Traffic Entries Received. Processing..");
 			local sigs = {}; 	--	signatures
 			for _, v in ipairs(TRAFFIC) do
 				if v[9] and v[10] and v[11] then
@@ -308,8 +309,8 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 					end
 				end
 			end
-			local limit = #CEPGP_Info.Traffic.ImportEntries;
-			local logs = CEPGP_Info.Traffic.ImportEntries;
+			local limit = #CEPGP_Info.TrafficImport;
+			local logs = CEPGP_Info.TrafficImport;
 			local count = 1;
 			local index;
 			
@@ -467,7 +468,7 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 					CEPGP_print("Traffic import has completed");
 					CEPGP_traffic_share:Enable();
 					CEPGP_UpdateTrafficScrollBar();
-					CEPGP_Info.Traffic.ImportEntries = {};
+					CEPGP_Info.TrafficImport = {};
 				end
 				
 				count = count + 1;
@@ -605,8 +606,8 @@ function CEPGP_IncAddonMsg(message, sender, channel)
 			end
 			
 			if CEPGP_Info.SharingTraffic and tStamp and id and GUID then
-				table.insert(CEPGP_Info.Traffic.ImportEntries, entry);
-				CEPGP_traffic_share_status:SetText(#CEPGP_Info.Traffic.ImportEntries .. " entries received");
+				table.insert(CEPGP_Info.TrafficImport, entry);
+				CEPGP_traffic_share_status:SetText(#CEPGP_Info.TrafficImport .. " entries received");
 			end
 		end);
 		
@@ -743,10 +744,10 @@ function CEPGP_ExportConfig(option, player)
 				CEPGP_SendAddonMsg("ExportConfig;Standby;Ranks;" .. index .. ";" .. data[1] .. ";" .. (data[2] and "true" or "false"), channel, player);
 			end
 			
-			if #CEPGP.Standby.Roster == 0 or not CEPGP.Standby.Share then return; end
+			if #CEPGP_standbyRoster == 0 or not CEPGP.Standby.Share then return; end
 			local roster = {};
 			
-			for index, data in ipairs(CEPGP.Standby.Roster) do
+			for index, data in ipairs(CEPGP_standbyRoster) do
 				table.insert(roster, data[1]);	--	Player name
 			end
 			
@@ -926,31 +927,31 @@ function CEPGP_SendAddonMsg(message, channel, player, logged)
 	
 	local conditions = {
 		["CallItem"] = function(id)
-			return (id == CEPGP_Info.Loot.DistributionID and CEPGP_Info.Loot.Distributing);
+			return (id == CEPGP_DistID and CEPGP_distributing);
 		end,
 		["LootClosed"] = function()
 			return CEPGP_frame:IsVisible();
 		end,
 		["RaidAssistLootDist"] = function()
-			return CEPGP_Info.Loot.Distributing;
+			return CEPGP_distributing;
 		end,
 		["RaidAssistLootClosed"] = function()
-			return not CEPGP_Info.Loot.Distributing;
+			return not CEPGP_distributing;
 		end,
 		["IgnoreUpdates"] = function(state)
 			return CEPGP_Info.IgnoreUpdates == state;
 		end,
 		["LootRsp"] = function(GUID)
-			if #CEPGP_Info.Loot.GUID > 0 then
-				return GUID == CEPGP_Info.Loot.GUID;
-			elseif CEPGP_Info.Loot.GUID == "" then
+			if #CEPGP_Info.LootGUID > 0 then
+				return GUID == CEPGP_Info.LootGUID;
+			elseif CEPGP_Info.LootGUID == "" then
 				return true;
 			else
 				return false;
 			end
 		end,
 		["CEPGP_setLootGUID"] = function(GUID)
-			return GUID == CEPGP_Info.Loot.GUID;
+			return GUID == CEPGP_Info.LootGUID;
 		end
 	}
 	
@@ -1021,17 +1022,17 @@ function CEPGP_SendAddonMsg(message, channel, player, logged)
 		callback = C_Timer.NewTicker(1, function()
 			if status == "abandoned" then
 				callback._remainingIterations = 1;
-				table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
+				table.insert(CEPGP.Log, {time(), status, UnitName("player"), player, message, channel});
 				return;
 			end
 			if hasSent() then
 				callback._remainingIterations = 1;
 				status = "sent";
-				table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
+				table.insert(CEPGP.Log, {time(), status, UnitName("player"), player, message, channel});
 			else
 				callback._remainingIterations = 2;
 				status = "attempt";
-				table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
+				table.insert(CEPGP.Log, {time(), status, UnitName("player"), player, message, channel});
 				send();
 			end
 		end, 1);

@@ -100,11 +100,11 @@ function CEPGP_ListButton_OnClick(obj, button)
 		
 		elseif strfind(obj, "StandbyButton") then
 			local name = _G[_G[_G[obj]:GetName()]:GetParent():GetName() .. "Info"]:GetText();
-			for i = 1, CEPGP_ntgetn(CEPGP.Standby.Roster) do
-				if CEPGP.Standby.Roster[i][1] == name then
-					table.remove(CEPGP.Standby.Roster, i);
+			for i = 1, CEPGP_ntgetn(CEPGP_standbyRoster) do
+				if CEPGP_standbyRoster[i][1] == name then
+					table.remove(CEPGP_standbyRoster, i);
 					if CEPGP_isML() == 0 and CEPGP_standby_share then
-						CEPGP_SendAddonMsg("StandbyListRemove;" .. CEPGP.Standby.Roster[i][1]);
+						CEPGP_SendAddonMsg("StandbyListRemove;" .. CEPGP_standbyRoster[i][1]);
 					end
 					break;
 				end
@@ -123,7 +123,7 @@ function CEPGP_ListButton_OnClick(obj, button)
 			end
 			if changes then
 				CEPGP_print("Updated EPGP rank exclusions");
-				CEPGP_Info.Guild.Roster = {};
+				CEPGP_roster = {};
 				CEPGP_Info.NumExcluded = 0;
 				CEPGP_rosterUpdate("GUILD_ROSTER_UPDATE");
 				
@@ -178,10 +178,10 @@ function CEPGP_ListButton_OnClick(obj, button)
 				for i = 1, GetNumGuildMembers() do
 					local name, _, rIndex = GetGuildRosterInfo(i);
 					name = Ambiguate(name, "all");
-					if ranks[rIndex+1] and not CEPGP_tContains(CEPGP.Standby.Roster, name) and not CEPGP_tContains(group, name) and name ~= UnitName("player") then
+					if ranks[rIndex+1] and not CEPGP_tContains(CEPGP_standbyRoster, name) and not CEPGP_tContains(group, name) and name ~= UnitName("player") then
 						local _, class, rank, _, oNote, _, classFile = CEPGP_getGuildInfo(name);
 						local EP,GP = CEPGP_getEPGP(name, i);
-						CEPGP.Standby.Roster[#CEPGP.Standby.Roster+1] = {
+						CEPGP_standbyRoster[#CEPGP_standbyRoster+1] = {
 							[1] = name,
 							[2] = class,
 							[3] = rank,
@@ -199,7 +199,7 @@ function CEPGP_ListButton_OnClick(obj, button)
 				CEPGP_UpdateStandbyScrollBar();
 			end
 			
-			if CEPGP_ntgetn(CEPGP_Info.Guild.Roster) < (GetNumGuildMembers() - CEPGP_Info.NumExcluded) and CEPGP_Info.Polling then
+			if CEPGP_ntgetn(CEPGP_roster) < (GetNumGuildMembers() - CEPGP_Info.NumExcluded) and CEPGP_Info.Polling then
 				CEPGP_print("Scanning guild roster. Will add rank to standby list soon");
 				local callback = function() addRankToStandby() end;
 				table.insert(CEPGP_Info.RosterStack, callback);
@@ -210,7 +210,7 @@ function CEPGP_ListButton_OnClick(obj, button)
 			return;
 		end
 		if obj == "CEPGP_standby_ep_list_purge" then
-			CEPGP.Standby.Roster = {};
+			CEPGP_standbyRoster = {};
 			CEPGP_UpdateStandbyScrollBar();
 		end
 		
@@ -273,15 +273,15 @@ function CEPGP_ListButton_OnClick(obj, button)
 			end
 			
 			CEPGP_distribute_popup_gp:SetScript('OnClick', function()
-				CEPGP_Info.DistTarget = _G[_G[obj]:GetName() .. "Info"]:GetText();
+				CEPGP_distPlayer = _G[_G[obj]:GetName() .. "Info"]:GetText();
 				CEPGP_distribute_popup:SetID(CEPGP_distribute:GetID()); --CEPGP_distribute:GetID gets the ID of the LOOT SLOT. Not the player.
-				CEPGP_Info.Loot.AwardRate = (100-discount)/100;
+				CEPGP_rate = (100-discount)/100;
 				if reason == "Exclusion List" then
-					CEPGP_Info.Loot.AwardGP = false;
+					CEPGP_distGP = false;
 				else
-					CEPGP_Info.Loot.AwardGP = true;
+					CEPGP_distGP = true;
 				end
-				CEPGP_Info.Loot.GiveWithEPGP = true;
+				CEPGP_award = true;
 				PlaySound(799);
 				CEPGP_distribute_popup_give();
 			end);
@@ -289,20 +289,20 @@ function CEPGP_ListButton_OnClick(obj, button)
 				reason = "Full Price";
 				CEPGP_distribute_popup:SetAttribute("responseName", reason);
 				CEPGP_distribute_popup:SetAttribute("response", tonumber(_G[obj]:GetAttribute("response")));
-				CEPGP_Info.DistTarget = _G[_G[obj]:GetName() .. "Info"]:GetText();
+				CEPGP_distPlayer = _G[_G[obj]:GetName() .. "Info"]:GetText();
 				CEPGP_distribute_popup:SetID(CEPGP_distribute:GetID());
-				CEPGP_Info.Loot.AwardRate = 1;
-				CEPGP_Info.Loot.AwardGP = true;
-				CEPGP_Info.Loot.GiveWithEPGP = true;
+				CEPGP_rate = 1;
+				CEPGP_distGP = true;
+				CEPGP_award = true;
 				PlaySound(799);
 				CEPGP_distribute_popup_give();
 			end);
 			CEPGP_distribute_popup_free:SetScript('OnClick', function()
-				CEPGP_Info.DistTarget = _G[_G[obj]:GetName() .. "Info"]:GetText();
+				CEPGP_distPlayer = _G[_G[obj]:GetName() .. "Info"]:GetText();
 				CEPGP_distribute_popup:SetID(CEPGP_distribute:GetID());
-				CEPGP_Info.Loot.AwardRate = 1;
-				CEPGP_Info.Loot.GiveWithEPGP = true;
-				CEPGP_Info.Loot.AwardGP = false;
+				CEPGP_rate = 1;
+				CEPGP_award = true;
+				CEPGP_distGP = false;
 				PlaySound(799);
 				CEPGP_distribute_popup_give();
 			end);
@@ -483,13 +483,13 @@ end
 
 function CEPGP_distribute_popup_give()
 	for i = 1, 40 do
-		if GetMasterLootCandidate(CEPGP_Info.Loot.SlotID, i) == CEPGP_Info.DistTarget then
-			GiveMasterLoot(CEPGP_Info.Loot.SlotID, i);
+		if GetMasterLootCandidate(CEPGP_lootSlot, i) == CEPGP_distPlayer then
+			GiveMasterLoot(CEPGP_lootSlot, i);
 			return;
 		end
 	end
-	CEPGP_print(CEPGP_Info.DistTarget .. " is not on the candidate list for loot", true);
-	CEPGP_Info.DistTarget = "";
+	CEPGP_print(CEPGP_distPlayer .. " is not on the candidate list for loot", true);
+	CEPGP_distPlayer = "";
 end
 
 function CEPGP_distribute_popup_OnEvent(eCode)
@@ -499,18 +499,18 @@ function CEPGP_distribute_popup_OnEvent(eCode)
 		22		Player already has one of the unique item
 	]]
 	
-	if CEPGP_Info.Loot.Distributing then
+	if CEPGP_distributing then
 		if eCode == 2 then
-			CEPGP_print(CEPGP_Info.DistTarget .. "'s inventory is full", 1);
+			CEPGP_print(CEPGP_distPlayer .. "'s inventory is full", 1);
 			CEPGP_distribute_popup:Hide();
-			CEPGP_Info.DistTarget = "";
-			CEPGP_Info.Loot.GiveWithEPGP = false;
+			CEPGP_distPlayer = "";
+			CEPGP_award = false;
 			
 		elseif eCode == 22 then
-			CEPGP_print(CEPGP_Info.DistTarget .. " can't carry any more of this unique item", 1);
+			CEPGP_print(CEPGP_distPlayer .. " can't carry any more of this unique item", 1);
 			CEPGP_distribute_popup:Hide();
-			CEPGP_Info.DistTarget = "";
-			CEPGP_Info.Loot.GiveWithEPGP = false;
+			CEPGP_distPlayer = "";
+			CEPGP_award = false;
 		end
 	end
 end
