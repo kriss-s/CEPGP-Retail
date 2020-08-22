@@ -7,10 +7,10 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 	end
 	response = tonumber(response);
 	--if not response then response = arg1; end
-	if not response and (arg1 ~= "!info" and arg1 ~= "!infoclass" and arg1 ~= "!infoguild" and arg1 ~= "!inforaid") then
+	if not response and (string.lower(arg1) ~= "!info" and string.lower(arg1) ~= "!infoclass" and string.lower(arg1) ~= "!infoguild" and string.lower(arg1) ~= "!inforaid") then
 		response = arg1;
 	end
-	local reason = CEPGP_response_buttons[response] and CEPGP_response_buttons[response][2] or CEPGP_Info.LootSchema[response] or CEPGP_getResponse(CEPGP_getResponseIndex(response));
+	local reason = CEPGP.Loot.GUI.Buttons[response] and CEPGP.Loot.GUI.Buttons[response][2] or CEPGP_Info.LootSchema[response] or CEPGP_getResponse(CEPGP_getResponseIndex(response));
 	local index = CEPGP_getIndex(arg2);
 
 	if event == "CHAT_MSG_WHISPER" and response then
@@ -36,12 +36,10 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 		end
 		
 		if not CEPGP_Info.Loot.Distributing then return; end
-		for name, _ in pairs(CEPGP_Info.Loot.ItemsTable) do
-			if name == arg2 then return; end
-		end
-		CEPGP_Info.LootRespondants = CEPGP_Info.LootRespondants + 1;
+		if CEPGP_Info.Loot.ItemsTable[name] then return; end
+		
 		if CEPGP_Info.Debug then
-			CEPGP_print(arg2 .. " registered (" .. CEPGP_keyword .. ")");
+			CEPGP_print(arg2 .. " registered (" .. CEPGP.EP.Keyword .. ")");
 		end
 		local _, _, _, _, _, _, _, _, slot = GetItemInfo(CEPGP_Info.Loot.DistributionID);
 		if not slot and CEPGP_itemExists(CEPGP_Info.Loot.DistributionID) then
@@ -59,10 +57,10 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 					class = select(5, GetGuildRosterInfo(index));
 					inGuild = true; 
 				end
-				if CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or (CEPGP_show_passes and response == 6) or response < 6 then
+				if CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or (CEPGP.Loot.ShowPass and response == 6) or response < 6 then
 					CEPGP_SendAddonMsg(arg2..";distslot;"..CEPGP_Info.Loot.DistEquipSlot, "RAID");
 				end
-				if inGuild and not CEPGP_suppress_announcements then
+				if inGuild and not CEPGP.Loot.SuppressResponses then
 					if (CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or response < 5) and not CEPGP.Loot.DelayResponses then	-- 5 means they're not using the addon or they're using an outdated version that doesn't support responses
 						if CEPGP.Loot.RollAnnounce then
 							CEPGP_sendChatMessage(arg2 .. " (" .. class .. ") needs (" .. reason .. "). (" .. math.floor((EP/GP)*100)/100 .. " PR) (Rolled " .. roll .. ")", CEPGP.LootChannel);
@@ -70,7 +68,7 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 							CEPGP_sendChatMessage(arg2 .. " (" .. class .. ") needs (" .. reason .. "). (" .. math.floor((EP/GP)*100)/100 .. " PR)", CEPGP.LootChannel);
 						end
 					end
-				elseif not CEPGP_suppress_announcements then
+				elseif not CEPGP.Loot.SuppressResponses then
 					local total = GetNumGroupMembers();
 					for i = 1, total do
 						if arg2 == GetRaidRosterInfo(i) then
@@ -85,10 +83,6 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 						end
 					end
 				end
-				if CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or (CEPGP_show_passes and response == 6) or response < 6 then --If you are the master looter
-					CEPGP_addResponse(arg2, response, roll);
-				end
-				CEPGP_UpdateLootScrollBar(true);
 			end);
 		else
 
@@ -107,10 +101,10 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 						inGuild = true; 
 					end
 				end
-			if CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or (CEPGP_show_passes and response == 6) or response < 6 then
+			if CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or (CEPGP.Loot.ShowPass and response == 6) or response < 6 then
 				CEPGP_SendAddonMsg(arg2..";distslot;"..CEPGP_Info.Loot.DistEquipSlot, "RAID");
 			end
-			if inGuild and not CEPGP_suppress_announcements then
+			if inGuild and not CEPGP.Loot.SuppressResponses then
 				if (CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or response < 5) and not CEPGP.Loot.DelayResponses then
 					if CEPGP.Loot.RollAnnounce then
 						CEPGP_sendChatMessage(arg2 .. " (" .. class .. ") needs (" .. reason .. "). (" .. math.floor((EP/GP)*100)/100 .. " PR) (Rolled " .. roll .. ")", CEPGP.LootChannel);
@@ -118,7 +112,7 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 						CEPGP_sendChatMessage(arg2 .. " (" .. class .. ") needs (" .. reason .. "). (" .. math.floor((EP/GP)*100)/100 .. " PR)", CEPGP.LootChannel);
 					end
 				end
-			elseif not CEPGP_suppress_announcements then
+			elseif not CEPGP.Loot.SuppressResponses then
 				local total = GetNumGroupMembers();
 				for i = 1, total do
 					if arg2 == GetRaidRosterInfo(i) then
@@ -133,52 +127,33 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 					end
 				end
 			end
-			if CEPGP_getResponse(arg1) or CEPGP_getResponseIndex(arg1) or (CEPGP_show_passes and response == 6) or response < 6 then
-				CEPGP_addResponse(arg2, response, roll);
-			end
-			CEPGP_UpdateLootScrollBar(true);
 		end
+		CEPGP_addResponse(arg2, response, roll);
+		CEPGP_UpdateLootScrollBar(true);
 		
 	elseif event == "CHAT_MSG_WHISPER" and string.lower(arg1) == "!info" then
 		if CEPGP_getGuildInfo(arg2) ~= nil then
-			local index = CEPGP_getIndex(arg2);
-			EP, GP = CEPGP_getEPGP(arg2, index);
-			if not CEPGP_Info.Version.List[arg2] then
+			local sender = arg2;
+			local index = CEPGP_getIndex(sender);
+			EP, GP = CEPGP_getEPGP(sender, index);
+			if CEPGP_Info.Version.List[sender][1] == "Addon not enabled" then
 				SendChatMessage("EPGP Standings - EP: " .. EP .. " / GP: " .. GP .. " / PR: " .. math.floor((EP/GP)*100)/100, "WHISPER", CEPGP_Info.Language, arg2);
 			else
 				CEPGP_SendAddonMsg("!info;" .. arg2 .. ";EPGP Standings - EP: " .. EP .. " / GP: " .. GP .. " / PR: " .. math.floor((EP/GP)*100)/100, "GUILD");
 			end
 		end
 	elseif event == "CHAT_MSG_WHISPER" and (string.lower(arg1) == "!infoguild" or string.lower(arg1) == "!inforaid" or string.lower(arg1) == "!infoclass") then
-		if CEPGP_getGuildInfo(arg2) ~= nil then
+		if CEPGP_Info.Guild.Roster[arg2] then
 			local target = arg2;
-			sRoster = {};
-			CEPGP_updateGuild();
-			local gRoster = {};
-			local rRoster = {};
-			local name, _, class, oNote, EP, GP;
-			for i = 1, GetNumGuildMembers() do
-				gRoster[i] = {};
-				name , _, _, _, class = GetGuildRosterInfo(i);
-				EP, GP = CEPGP_getEPGP(name, i);
-				if string.find(name, "-") then
-					name = string.sub(name, 0, string.find(name, "-")-1);
-				end
-				gRoster[i] = {
-					[1] = name,
-					[2] = EP,
-					[3] = GP,
-					[4] = math.floor((EP/GP)*100)/100,
-					[5] = class
-				};
-			end
+			local _, _, class, oNote, EP, GP;
+			
 			if string.lower(arg1) == "!infoguild" then	--	Need to show EP, GP, PR and PR position
 				local roster = {};
-				for k, v in pairs(CEPGP_Info.Guild.Roster) do
+				for name, v in pairs(CEPGP_Info.Guild.Roster) do
 					local EP, GP = CEPGP_getEPGP(k, v[1]);
 					local PR = math.floor((EP/GP)*100)/100;
 					local entry = {
-						[1] = k,
+						[1] = name,
 						[2] = v[1],	--index
 						[3] = EP,
 						[4] = GP,
@@ -188,49 +163,51 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 					table.insert(roster, entry);
 				end
 				
-				roster = CEPGP_tSort(roster, 5);
+				roster = CEPGP_tSort(roster, 5, true);
 				
-				for i = 1, #roster do
-					if roster[i][1] == target then
-						if not CEPGP_Info.Version.List[target] then
-							SendChatMessage("EP: " .. roster[i][3] .. " / GP: " .. roster[i][4] .. " / PR: " .. roster[i][5] .. " / PR rank in guild: #" .. i, "WHISPER", CEPGP_Info.Language, target);
+				for index, data in ipairs(roster) do
+					if data[1] == target then
+						if CEPGP_Info.Version.List[target][1] == "Addon not enabled" then
+							SendChatMessage("EP: " .. data[3] .. " / GP: " .. data[4] .. " / PR: " .. data[5] .. " / PR rank in Guild: #" .. index, "WHISPER", CEPGP_Info.Language, target);
 						else
-							CEPGP_SendAddonMsg("!info;" .. target .. ";EP: " .. roster[i][3] .. " / GP: " .. roster[i][4] .. " / PR: " .. roster[i][5] .. " / PR rank in raid: #" .. i, "GUILD");
+							CEPGP_SendAddonMsg("!info;" .. target .. ";EP: " .. data[3] .. " / GP: " .. data[4] .. " / PR: " .. data[5] .. " / PR rank in Guild: #" .. index, "WHISPER", target);
 						end
 						break;
 					end
 				end
+				
 			elseif string.lower(arg1) == "!inforaid" then
 				if not UnitInRaid("player") then return; end
 			
 				local roster = CEPGP_Info.Raid.Roster;
 				
-				roster = CEPGP_tSort(roster, 7);
+				roster = CEPGP_tSort(roster, 7, true);
 				
-				for i = 1, #roster do
-					if roster[i][1] == target then
-						if not CEPGP_Info.Version.List[target] then
-							SendChatMessage("EP: " .. roster[i][5] .. " / GP: " .. roster[i][6] .. " / PR: " .. roster[i][7] .. " / PR rank in guild: #" .. i, "WHISPER", CEPGP_Info.Language, target);
+				for index, data in ipairs(roster) do
+					if data[1] == target then
+						if CEPGP_Info.Version.List[target][1] == "Addon not enabled" then
+							SendChatMessage("EP: " .. data[5] .. " / GP: " .. data[6] .. " / PR: " .. data[7] .. " / PR rank in Raid: #" .. index, "WHISPER", CEPGP_Info.Language, target);
 						else
-							CEPGP_SendAddonMsg("!info;" .. target .. ";EP: " .. roster[i][5] .. " / GP: " .. roster[i][6] .. " / PR: " .. roster[i][7] .. " / PR rank in raid: #" .. i, "GUILD");
+							CEPGP_SendAddonMsg("!info;" .. target .. ";EP: " .. data[5] .. " / GP: " .. data[6] .. " / PR: " .. data[7] .. " / PR rank in Raid: #" .. index, "WHISPER", target);
 						end
 						break;
 					end
 				end
 				
 			elseif string.lower(arg1) == "!infoclass" then
-				
 				if not UnitInRaid("player") then return; end
 				
-				local roster = {};
-				local class;
-				
-				for index, v in ipairs(CEPGP_Info.Raid.Roster) do
-					if v[1] == target then
-						class = v[2];
-						break;
+				local function GetClassFromRaid()
+					for index, v in ipairs(CEPGP_Info.Raid.Roster) do
+						if v[1] == target then
+							class = v[2];
+							break;
+						end
 					end
 				end
+				
+				local roster = {};
+				local class = CEPGP_Info.Guild.Roster[target] and CEPGP_Info.Guild.Roster[target][2] or GetClassFromRaid();
 				
 				if not class then
 					CEPGP_print(target .. " is not in the raid group");
@@ -243,14 +220,14 @@ function CEPGP_handleComms(event, arg1, arg2, response, lootGUID)
 					end
 				end
 				
-				roster = CEPGP_tSort(roster, 7);
+				roster = CEPGP_tSort(roster, 7, true);
 				
-				for i = 1, #roster do
-					if roster[i][1] == target then
-						if not CEPGP_Info.Version.List[target] then
-							SendChatMessage("EP: " .. roster[i][5] .. " / GP: " .. roster[i][6] .. " / PR: " .. roster[i][7] .. " / PR rank among " .. class .. "s in raid: #" .. i, "WHISPER", CEPGP_Info.Language, target);
+				for index, data in ipairs(roster) do
+					if data[1] == target then
+						if CEPGP_Info.Version.List[target][1] == "Addon not enabled" then
+							SendChatMessage("EP: " .. data[5] .. " / GP: " .. data[6] .. " / PR: " .. data[7] .. " / PR rank among " .. class .. "s in Raid: #" .. index, "WHISPER", CEPGP_Info.Language, target);
 						else
-							CEPGP_SendAddonMsg("!info;" .. target .. ";EP: " .. roster[i][5] .. " / GP: " .. roster[i][6] .. " / PR: " .. roster[i][7] .. " / PR rank among " .. class .. "s in raid: #" .. i, "GUILD");
+							CEPGP_SendAddonMsg("!info;" .. target .. ";EP: " .. data[5] .. " / GP: " .. data[6] .. " / PR: " .. data[7] .. " / PR rank among " .. class .. "s in Raid: #" .. index, "WHISPER", target);
 						end
 						break;
 					end
@@ -263,7 +240,7 @@ end
 function CEPGP_handleCombat(name)
 	if (((GetLootMethod() == "master" and CEPGP_isML() == 0) or (GetLootMethod() == "group" and UnitIsGroupLeader("player"))) and CEPGP_ntgetn(CEPGP_Info.Guild.Roster) > 0) or CEPGP_Info.Debug then
 		local localName = L[name];
-		local EP = EPVALS[name];
+		local EP = CEPGP.EP.BossEP[name];
 		local plurals = name == "The Four Horsemen" or name == "The Silithid Royalty" or name == "The Twin Emperors";
 		local message = format(L["%s " .. (plurals and "have" or "has") .. " been defeated! %d EP has been awarded to the raid"], localName, EP);
 		local callback = function()
@@ -279,8 +256,8 @@ function CEPGP_handleCombat(name)
 			end
 			
 			local function awardStandbyEP(localName, EP)
-				if STANDBYEP and tonumber(STANDBYPERCENT) > 0 then
-					CEPGP_addStandbyEP(EP*(tonumber(STANDBYPERCENT)/100), localName);
+				if CEPGP.Standby.Enabled and tonumber(CEPGP.Standby.Percent) > 0 then
+					CEPGP_addStandbyEP(EP*(tonumber(CEPGP.Standby.Percent)/100), localName);
 				end
 			end
 			
@@ -292,7 +269,7 @@ function CEPGP_handleCombat(name)
 			end
 		end
 		
-		if CEPGP_ntgetn(CEPGP_Info.Guild.Roster) < (GetNumGuildMembers() - CEPGP_Info.NumExcluded) and CEPGP_Info.Polling then
+		if CEPGP_ntgetn(CEPGP_Info.Guild.Roster) < GetNumGuildMembers() and CEPGP_Info.Polling then
 			table.insert(CEPGP_Info.RosterStack, callback);
 		else
 			callback();
@@ -353,7 +330,9 @@ function CEPGP_handleLoot(event, arg1, arg2)
 		ShowUIPanel(CEPGP_button_loot_dist);
 
 	elseif event == "LOOT_SLOT_CLEARED" then
-		if CEPGP_Info.Loot.Distributing and arg1 == CEPGP_Info.Loot.SlotID then --Confirms that an item is currently being distributed and that the item taken is the one in question
+		local slotNum = arg1;
+		if CEPGP_Info.Loot.Distributing and slotNum == CEPGP_Info.Loot.SlotNum then --Confirms that an item is currently being distributed and that the item taken is the one in question
+			CEPGP_LootFrame_Update();
 			
 			if CEPGP_isML() == 0 then
 				if CEPGP.Loot.RaidVisibility[2] then
@@ -391,10 +370,10 @@ function CEPGP_handleLoot(event, arg1, arg2)
 					if distGP then
 						if response then
 							local message = "Awarded " .. itemName .. " to ".. player .. " for " .. gpValue*rate .. " GP (" .. response .. ")";
-							SendChatMessage(message, CHANNEL, CEPGP_Info.Language);
+							SendChatMessage(message, CEPGP.Channel, CEPGP_Info.Language);
 						else
 							local message = "Awarded " .. itemName .. " to ".. player .. " for " .. gpValue*rate .. " GP";
-							SendChatMessage(message, CHANNEL, CEPGP_Info.Language);
+							SendChatMessage(message, CEPGP.Channel, CEPGP_Info.Language);
 						end
 						CEPGP_addGP(player, gpValue*rate, id, link, nil, response);
 					else
@@ -403,37 +382,35 @@ function CEPGP_handleLoot(event, arg1, arg2)
 							local EP, GP = CEPGP_getEPGP(player, index);
 							if response then
 								if response == "Highest Roll (Free)" then
-									SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free (Highest Roll)", CHANNEL, CEPGP_Info.Language);
+									SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free (Highest Roll)", CEPGP.Channel, CEPGP_Info.Language);
 									CEPGP_addTraffic(player, UnitName("player"), response, EP, EP, GP, GP, id, tStamp);
 								else
-									SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free", CHANNEL, CEPGP_Info.Language);
+									SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free", CEPGP.Channel, CEPGP_Info.Language);
 									CEPGP_addTraffic(player, UnitName("player"), "Given for Free", EP, EP, GP, GP, id, tStamp);
 								end
 							else
-								SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free", CHANNEL, CEPGP_Info.Language);
+								SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free", CEPGP.Channel, CEPGP_Info.Language);
 								CEPGP_addTraffic(player, UnitName("player"), "Given for Free", EP, EP, GP, GP, id, tStamp);
 							end
 						else
 							local index = CEPGP_getIndex(player);
 							if index then
-								SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free (Exclusion List)", CHANNEL, CEPGP_Info.Language);
+								SendChatMessage("Awarded " .. itemName .. " to ".. player .. " for free (Exclusion List)", CEPGP.Channel, CEPGP_Info.Language);
 								CEPGP_addTraffic(player, UnitName("player"), "Given for Free (Exclusion List)", nil, nil, nil, nil, id, tStamp);
 							end
 						end
 					end
 					
 				else
-					SendChatMessage(itemName .. " has been distributed without EPGP", CHANNEL, CEPGP_Info.Language);
+					SendChatMessage(itemName .. " has been distributed without EPGP", CEPGP.Channel, CEPGP_Info.Language);
 					CEPGP_addTraffic("", UnitName("player"), "Manually Awarded", "", "", "", "", id, tStamp);
 				end
 			end;
-			if CEPGP_ntgetn(CEPGP_Info.Guild.Roster) < (GetNumGuildMembers() - CEPGP_Info.NumExcluded) and CEPGP_Info.Polling then
+			if CEPGP_ntgetn(CEPGP_Info.Guild.Roster) < GetNumGuildMembers() and CEPGP_Info.Polling then
 				table.insert(CEPGP_Info.RosterStack, callback);
 			else
 				callback();
 			end
 		end
-		
-		CEPGP_LootFrame_Update();
 	end	
 end
