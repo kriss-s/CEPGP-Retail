@@ -16,46 +16,65 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 				[2] = CEPGP_Info.Guild.Roster[name][2], --Class
 				[3] = CEPGP_Info.Guild.Roster[name][3], --Rank
 				[4] = CEPGP_Info.Guild.Roster[name][4], --RankIndex
-				[5] = (CEPGP_Info.Guild.Roster[name][9] and -1 or EP),
-				[6] = (CEPGP_Info.Guild.Roster[name][9] and -1 or GP),
-				[7] = (CEPGP_Info.Guild.Roster[name][9] and -1 or math.floor((EP/GP)*100)/100),
+				[5] = EP,
+				[6] = GP,
+				[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
 				[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
 				[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
 				[10] = CEPGP_Info.Guild.Roster[name][7], --className in English
 				[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
-				[12] = CEPGP_Info.Loot.ItemsTable[name][4],
-				[13] = CEPGP_Info.Guild.Roster[name][9]
+				[12] = CEPGP_Info.Loot.ItemsTable[name][4]
 			};
-		else	--	Player is in raid, but not in guild
-			EP = 0;
-			GP = CEPGP.GP.Min;
-			for i = 1, GetNumGroupMembers() do
-				if GetRaidRosterInfo(i) == name then
-					local class = select(5, GetRaidRosterInfo(i))
-					local rank = "Not in Guild";
-					local rankIndex = 11;
-					local classFile = select(6, GetRaidRosterInfo(i));
-					tempTable[count] = {
-						[1] = name,
-						[2] = class,
-						[3] = rank,
-						[4] = rankIndex,
-						[5] = EP,
-						[6] = GP,
-						[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
-						[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
-						[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
-						[10] = classFile,
-						[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
-						[12] = CEPGP_Info.Loot.ItemsTable[name][4]
-					};
+		else
+			local index = CEPGP_getIndex(name);
+			if index then
+				local _, rank, rankIndex, _, class, _, _, _, _, _, classFileName = GetGuildRosterInfo(index);
+				EP, GP = CEPGP_getEPGP(name, index);
+				tempTable[count] = {
+					[1] = name,
+					[2] = class,
+					[3] = rank,
+					[4] = rankIndex,
+					[5] = EP,
+					[6] = GP,
+					[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
+					[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
+					[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
+					[10] = classFileName,
+					[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
+					[12] = CEPGP_Info.Loot.ItemsTable[name][4]
+				};
+			else
+				EP = 0;
+				GP = BASEGP;
+				for i = 1, GetNumGroupMembers() do
+					if GetRaidRosterInfo(i) == name then
+						local class = select(5, GetRaidRosterInfo(i))
+						local rank = "Not in Guild";
+						local rankIndex = 11;
+						local classFile = select(6, GetRaidRosterInfo(i));
+						tempTable[count] = {
+							[1] = name,
+							[2] = class,
+							[3] = rank,
+							[4] = rankIndex,
+							[5] = EP,
+							[6] = GP,
+							[7] = math.floor((tonumber(EP)*100/tonumber(GP)))/100,
+							[8] = CEPGP_Info.Loot.ItemsTable[name][1] or "noitem",
+							[9] = CEPGP_Info.Loot.ItemsTable[name][2] or "noitem",
+							[10] = classFile,
+							[11] = CEPGP_Info.Loot.ItemsTable[name][3], -- Loot response
+							[12] = CEPGP_Info.Loot.ItemsTable[name][4]
+						};
+					end
 				end
 			end
 		end
 		count = count + 1;
 		
 	end
-	if PRsort and CEPGP.Loot.AutoSort then
+	if PRsort and CEPGP_PR_sort then
 		tempTable = CEPGP_sortDistList(tempTable);
 	elseif sort then
 		tempTable = CEPGP_tSort(tempTable, CEPGP_Info.Sorting.Loot[1], CEPGP_Info.Sorting.Loot[2]);
@@ -64,20 +83,10 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 	for _, child in ipairs(kids) do
 		child:Hide();
 	end
-	local i = 1;
-	for _, data in ipairs(tempTable) do
+	for i = 1, #tempTable do
 		if quit then return; end
 		if CEPGP_Info.LastRun.DistSB ~= call then
 			quit = true;
-			return;
-		end
-		local response = tempTable[i][11];
-		local reason = CEPGP_Info.LootSchema[tempTable[i][11]];
-		local EPcolour, EP, GP, PR;
-		EP = (tempTable[i][5] == -1 and "Excluded" or tempTable[i][5]);
-		GP = (tempTable[i][6] == -1 and "Excluded" or tempTable[i][6]);
-		PR = (tempTable[i][7] == -1 and "Excluded" or tempTable[i][7]);
-		if response == "Pass" then
 			return;
 		end
 		if not _G["LootDistButton" .. i] then
@@ -88,6 +97,10 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 				_G["LootDistButton" .. i]:SetPoint("TOPLEFT", _G["CEPGP_dist_scrollframe_container"], "TOPLEFT", 0, -10);
 			end
 		end
+		--tempTable[i][11] = (CEPGP_response_buttons[tonumber(tempTable[i][11])] and CEPGP_response_buttons[tonumber(tempTable[i][11])][2]) or tempTable[i][11];
+		local response = tempTable[i][11];
+		local reason = CEPGP_Info.LootSchema[tempTable[i][11]];
+		local EPcolour;
 		if CEPGP.Loot.MinReq[1] and CEPGP.Loot.MinReq[2] > tonumber(tempTable[i][5]) then
 			EPcolour = {
 				r = 1,
@@ -107,64 +120,76 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 			};
 		end
 		
-		_G["LootDistButton" .. i]:Show();
-		_G["LootDistButton" .. i]:SetAttribute("response", response);
-		_G["LootDistButton" .. i]:SetAttribute("responseName", response);
-		_G["LootDistButton" .. i .. "Info"]:SetText(tempTable[i][1]);
-		_G["LootDistButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
-		_G["LootDistButton" .. i .. "Class"]:SetText(tempTable[i][2]);
-		_G["LootDistButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
-		_G["LootDistButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
-		_G["LootDistButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
-		_G["LootDistButton" .. i .. "Response"]:SetText(reason);
-		_G["LootDistButton" .. i .. "Response"]:SetTextColor(colour.r, colour.g, colour.b);
-		_G["LootDistButton" .. i .. "EP"]:SetText(EP);
-		_G["LootDistButton" .. i .. "GP"]:SetText(GP);
-		_G["LootDistButton" .. i .. "PR"]:SetText(PR);
-		_G["LootDistButton" .. i .. "Roll"]:SetText(tempTable[i][12]);
-		_G["LootDistButton" .. i .. "Roll"]:SetTextColor(colour.r, colour.g, colour.b);
-		
-		if tempTable[i][13] then
-			_G["LootDistButton" .. i .. "EP"]:SetTextColor(1, 0, 0);
-			_G["LootDistButton" .. i .. "GP"]:SetTextColor(1, 0, 0);
-			_G["LootDistButton" .. i .. "PR"]:SetTextColor(1, 0, 0);
-		else
-			_G["LootDistButton" .. i .. "EP"]:SetTextColor(EPcolour.r, EPcolour.g, EPcolour.b);
-			_G["LootDistButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
-			_G["LootDistButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
-		end
-				
 		if tempTable[i][8] ~= "noitem" or tempTable[i][9] ~= "noitem" then
 			if tempTable[i][8] ~= "noitem" then
 				local id = tonumber(tempTable[i][8]);
 				_, link, _, _, _, _, _, _, _, tex = GetItemInfo(id);
 				local iString;
-				if not link and CEPGP_itemExists(id) then	--	If the item exists, but item info is not available
+				if not link and CEPGP_itemExists(id) then
 					local item = Item:CreateFromItemID(id);
 					item:ContinueOnItemLoad(function()
 						_, link, _, _, _, _, _, _, _, tex = GetItemInfo(id)
 						iString = CEPGP_getItemString(link);
-						_G["LootDistButton" .. i .. "Tex"]:SetScript('OnLeave', function()
-									GameTooltip:Hide()
-						end);
 						
+						_G["LootDistButton" .. i]:Show();
+						_G["LootDistButton" .. i]:SetAttribute("response", response);
+						_G["LootDistButton" .. i]:SetAttribute("responseName", response);
+						_G["LootDistButton" .. i .. "Info"]:SetText(tempTable[i][1]);
+						_G["LootDistButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Class"]:SetText(tempTable[i][2]);
+						_G["LootDistButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
+						_G["LootDistButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Response"]:SetText(reason);
+						_G["LootDistButton" .. i .. "Response"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+						_G["LootDistButton" .. i .. "EP"]:SetTextColor(EPcolour.r, EPcolour.g, EPcolour.b);
+						_G["LootDistButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+						_G["LootDistButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+						_G["LootDistButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Roll"]:SetText(tempTable[i][12]);
+						_G["LootDistButton" .. i .. "Roll"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Tex"]:SetScript('OnLeave', function()
+																						GameTooltip:Hide()
+																			end);
 						_G["LootDistButton" .. i .. "Tex"]:SetScript('OnEnter', function()	
-							GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex"], "ANCHOR_TOPLEFT");
-							GameTooltip:SetHyperlink(iString);
-							GameTooltip:Show();
-						end);
+																				GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex"], "ANCHOR_TOPLEFT");
+																				GameTooltip:SetHyperlink(iString);
+																				GameTooltip:Show();
+																			end);
 						_G["LootDistButton" .. i .. "Icon"]:SetTexture(tex);					
 					end);
-				elseif link and CEPGP_itemExists(id) then
+				else
 					iString = CEPGP_getItemString(link);
+				
+					_G["LootDistButton" .. i]:Show();
+					_G["LootDistButton" .. i]:SetAttribute("response", response);
+					_G["LootDistButton" .. i]:SetAttribute("responseName", response);
+					_G["LootDistButton" .. i .. "Info"]:SetText(tempTable[i][1]);
+					_G["LootDistButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Class"]:SetText(tempTable[i][2]);
+					_G["LootDistButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
+					_G["LootDistButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Response"]:SetText(reason);
+					_G["LootDistButton" .. i .. "Response"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+					_G["LootDistButton" .. i .. "EP"]:SetTextColor(EPcolour.r, EPcolour.g, EPcolour.b);
+					_G["LootDistButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+					_G["LootDistButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+					_G["LootDistButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Roll"]:SetText(tempTable[i][12]);
+					_G["LootDistButton" .. i .. "Roll"]:SetTextColor(colour.r, colour.g, colour.b);
 					_G["LootDistButton" .. i .. "Tex"]:SetScript('OnLeave', function()
-								GameTooltip:Hide()
-					end);
+																					GameTooltip:Hide()
+																		end);
 					_G["LootDistButton" .. i .. "Tex"]:SetScript('OnEnter', function()	
-						GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex"], "ANCHOR_TOPLEFT");
-						GameTooltip:SetHyperlink(iString);
-						GameTooltip:Show();
-					end);
+																			GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex"], "ANCHOR_TOPLEFT");
+																			GameTooltip:SetHyperlink(iString);
+																			GameTooltip:Show();
+																		end);
 					_G["LootDistButton" .. i .. "Icon"]:SetTexture(tex);
 				end
 			else
@@ -181,26 +206,66 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 					item:ContinueOnItemLoad(function()
 						_, link, _, _, _, _, _, _, _, tex2 = GetItemInfo(id)
 						iString2 = CEPGP_getItemString(link);
+						
+						_G["LootDistButton" .. i]:Show();
+						_G["LootDistButton" .. i]:SetAttribute("response", response);
+						_G["LootDistButton" .. i]:SetAttribute("responseName", response);
+						_G["LootDistButton" .. i .. "Info"]:SetText(tempTable[i][1]);
+						_G["LootDistButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Class"]:SetText(tempTable[i][2]);
+						_G["LootDistButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
+						_G["LootDistButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Response"]:SetText(reason);
+						_G["LootDistButton" .. i .. "Response"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+						_G["LootDistButton" .. i .. "EP"]:SetTextColor(EPcolour.r, EPcolour.g, EPcolour.b);
+						_G["LootDistButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+						_G["LootDistButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+						_G["LootDistButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
+						_G["LootDistButton" .. i .. "Roll"]:SetText(tempTable[i][12]);
+						_G["LootDistButton" .. i .. "Roll"]:SetTextColor(colour.r, colour.g, colour.b);
 						_G["LootDistButton" .. i .. "Tex2"]:SetScript('OnLeave', function()
-							GameTooltip:Hide()
-						end);
+																				GameTooltip:Hide()
+																			end);
 						_G["LootDistButton" .. i .. "Tex2"]:SetScript('OnEnter', function()	
-							GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex2"], "ANCHOR_TOPLEFT")
-							GameTooltip:SetHyperlink(iString2)
-							GameTooltip:Show()
-						end);				
+														GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex2"], "ANCHOR_TOPLEFT")
+														GameTooltip:SetHyperlink(iString2)
+														GameTooltip:Show()
+													end);				
 						_G["LootDistButton" .. i .. "Icon2"]:SetTexture(tex2);
 					end);
 				else
 					iString2 = CEPGP_getItemString(link);
+					
+					_G["LootDistButton" .. i]:Show();
+					_G["LootDistButton" .. i]:SetAttribute("response", response);
+					_G["LootDistButton" .. i]:SetAttribute("responseName", response);
+					_G["LootDistButton" .. i .. "Info"]:SetText(tempTable[i][1]);
+					_G["LootDistButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Class"]:SetText(tempTable[i][2]);
+					_G["LootDistButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
+					_G["LootDistButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Response"]:SetText(reason);
+					_G["LootDistButton" .. i .. "Response"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+					_G["LootDistButton" .. i .. "EP"]:SetTextColor(EPcolour.r, EPcolour.g, EPcolour.b);
+					_G["LootDistButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+					_G["LootDistButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+					_G["LootDistButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
+					_G["LootDistButton" .. i .. "Roll"]:SetText(tempTable[i][12]);
+					_G["LootDistButton" .. i .. "Roll"]:SetTextColor(colour.r, colour.g, colour.b);
 					_G["LootDistButton" .. i .. "Tex2"]:SetScript('OnLeave', function()
-						GameTooltip:Hide()
-					end);
+																			GameTooltip:Hide()
+																		end);
 					_G["LootDistButton" .. i .. "Tex2"]:SetScript('OnEnter', function()	
-						GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex2"], "ANCHOR_TOPLEFT")
-						GameTooltip:SetHyperlink(iString2)
-						GameTooltip:Show()
-					end);				
+													GameTooltip:SetOwner(_G["LootDistButton" .. i .. "Tex2"], "ANCHOR_TOPLEFT")
+													GameTooltip:SetHyperlink(iString2)
+													GameTooltip:Show()
+												end);				
 					_G["LootDistButton" .. i .. "Icon2"]:SetTexture(tex2);
 				end
 			else
@@ -208,12 +273,32 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 				_G["LootDistButton" .. i .. "Icon2"]:SetTexture(nil);
 			end
 		else --Recipient has no items in the corresponding slots
+			
+			_G["LootDistButton" .. i]:Show();
+			_G["LootDistButton" .. i]:SetAttribute("response", response);
+			_G["LootDistButton" .. i]:SetAttribute("responseName", response);
+			_G["LootDistButton" .. i .. "Info"]:SetText(tempTable[i][1]);
+			_G["LootDistButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["LootDistButton" .. i .. "Class"]:SetText(tempTable[i][2]);
+			_G["LootDistButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["LootDistButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
+			_G["LootDistButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["LootDistButton" .. i .. "Response"]:SetText(reason);
+			_G["LootDistButton" .. i .. "Response"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["LootDistButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+			_G["LootDistButton" .. i .. "EP"]:SetTextColor(EPcolour.r, EPcolour.g, EPcolour.b);
+			_G["LootDistButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+			_G["LootDistButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["LootDistButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+			_G["LootDistButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["LootDistButton" .. i .. "Roll"]:SetText(tempTable[i][12]);
+			_G["LootDistButton" .. i .. "Roll"]:SetTextColor(colour.r, colour.g, colour.b);
 			_G["LootDistButton" .. i .. "Tex"]:SetScript('OnLeave', function()
-						GameTooltip:Hide()
-			end);
+																			GameTooltip:Hide()
+																end);
 			_G["LootDistButton" .. i .. "Tex2"]:SetScript('OnLeave', function()
-				GameTooltip:Hide()
-			end);
+																	GameTooltip:Hide()
+																end);
 			_G["LootDistButton" .. i .. "Icon"]:SetTexture(nil);
 			_G["LootDistButton" .. i .. "Icon2"]:SetTexture(nil);
 			_G["LootDistButton" .. i .. "Tex2"]:SetScript('OnEnter', function() end);
@@ -221,34 +306,29 @@ function CEPGP_UpdateLootScrollBar(PRsort, sort)
 			_G["LootDistButton" .. i .. "Tex"]:SetScript('OnEnter', function() end);
 			_G["LootDistButton" .. i .. "Icon"]:SetTexture(nil);
 		end
-		i = i + 1;
 	end
 end
 
 function CEPGP_UpdateGuildScrollBar()
 	CEPGP_Info.LastRun.GuildSB = GetTime();
-	if CEPGP_ntgetn(CEPGP_Info.Guild.Roster) ~= GetNumGuildMembers() then return; end	--	This is mostly to prevent an error occurring if people check the scrollframe too soon after the UI loads
 	local call = CEPGP_Info.LastRun.GuildSB;
 	local quit = false;
 	local tempTable = {};
-	local count = 1;
+	local count = 0;
 	for name, v in pairs(CEPGP_Info.Guild.Roster) do
-		if not v[10] then	--	If this player is not being hidden due to rank filtering
-			local index = CEPGP_getIndex(name);
-			local EP, GP = CEPGP_getEPGP(name, index)
-			tempTable[count] = {
-				[1] = name,
-				[2] = v[2], --Class
-				[3] = v[3], --Rank
-				[4] = v[4], --RankIndex
-				[5] = (CEPGP_Info.Guild.Roster[name][9] and -1 or EP),
-				[6] = (CEPGP_Info.Guild.Roster[name][9] and -1 or GP),
-				[7] = (CEPGP_Info.Guild.Roster[name][9] and -1 or math.floor((EP/GP)*100)/100),
-				[8] = v[7], -- className in English,
-				[9] = v[9] -- Exclusion status,
-			};
-			count = count + 1;
-		end
+		count = count + 1;
+		local index = CEPGP_getIndex(name);
+		local EP, GP = CEPGP_getEPGP(name, index)
+		tempTable[count] = {
+			[1] = name,
+			[2] = v[2], --Class
+			[3] = v[3], --Rank
+			[4] = v[4], --RankIndex
+			[5] = EP,
+			[6] = GP,
+			[7] = math.floor((EP/GP)*100)/100,
+			[8] = v[7] -- className in English
+		};
 	end
 	tempTable = CEPGP_tSort(tempTable, CEPGP_Info.Sorting.Guild[1], CEPGP_Info.Sorting.Guild[2]);
 	local kids = {_G["CEPGP_guild_scrollframe_container"]:GetChildren()};
@@ -259,28 +339,23 @@ function CEPGP_UpdateGuildScrollBar()
 		end
 		--child:Hide();
 	end
-	local i = 1;
+	local i = 0;
 
 	C_Timer.NewTicker(0.0001, function()
+		if quit then return; end
 		if CEPGP_Info.LastRun.GuildSB ~= call then
 			quit = true;
 			return;
 		end
-		local EPcolour, EP, GP, PR;
-		EP = (tempTable[i][5] == -1 and "Excluded" or tempTable[i][5]);
-		GP = (tempTable[i][6] == -1 and "Excluded" or tempTable[i][6]);
-		PR = (tempTable[i][7] == -1 and "Excluded" or tempTable[i][7]);
+		i = i + 1;
 		if #tempTable > 0 then
-			local frame;
 			if not _G["GuildButton" .. i] then
-				frame = CreateFrame('Button', "GuildButton" .. i, _G["CEPGP_guild_scrollframe_container"], "GuildButtonTemplate");
+				local frame = CreateFrame('Button', "GuildButton" .. i, _G["CEPGP_guild_scrollframe_container"], "GuildButtonTemplate");
 				if i > 1 then
 					_G["GuildButton" .. i]:SetPoint("TOPLEFT", _G["GuildButton" .. i-1], "BOTTOMLEFT", 0, -2);
 				else
 					_G["GuildButton" .. i]:SetPoint("TOPLEFT", _G["CEPGP_guild_scrollframe_container"], "TOPLEFT", 0, -10);
 				end
-			else
-				frame = _G["GuildButton" .. i];
 			end
 			local colour = CEPGP_Info.ClassColours[string.upper(tempTable[i][8])];
 			if not colour then
@@ -290,7 +365,6 @@ function CEPGP_UpdateGuildScrollBar()
 				b = 1
 			};
 			end
-			frame:SetAttribute("excluded", (tempTable[i][9] and true or false));
 			_G["GuildButton" .. i]:Show();
 			_G["GuildButton" .. i .. "Info"]:SetText(tempTable[i][1]);
 			_G["GuildButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
@@ -298,20 +372,13 @@ function CEPGP_UpdateGuildScrollBar()
 			_G["GuildButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
 			_G["GuildButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
 			_G["GuildButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
-			_G["GuildButton" .. i .. "EP"]:SetText(EP);
-			_G["GuildButton" .. i .. "GP"]:SetText(GP);
-			_G["GuildButton" .. i .. "PR"]:SetText(PR);
-			if tempTable[i][9] then
-				_G["GuildButton" .. i .. "EP"]:SetTextColor(1, 0, 0);
-				_G["GuildButton" .. i .. "GP"]:SetTextColor(1, 0, 0);
-				_G["GuildButton" .. i .. "PR"]:SetTextColor(1, 0, 0);
-			else
-				_G["GuildButton" .. i .. "EP"]:SetTextColor(colour.r, colour.g, colour.b);
-				_G["GuildButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
-				_G["GuildButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
-			end
+			_G["GuildButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+			_G["GuildButton" .. i .. "EP"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["GuildButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+			_G["GuildButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+			_G["GuildButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+			_G["GuildButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
 		end
-		i = i + 1;
 	end, #tempTable);
 end
 
@@ -320,19 +387,15 @@ function CEPGP_UpdateRaidScrollBar()
 	local call = CEPGP_Info.LastRun.RaidSB;
 	local tempTable = {};
 	for i = 1, CEPGP_ntgetn(CEPGP_Info.Raid.Roster) do
-		local name = CEPGP_Info.Raid.Roster[i][1];
-		local excluded = CEPGP_Info.Guild.Roster[name] and CEPGP_Info.Guild.Roster[name][9];
-		
 		tempTable[i] = {
 			[1] = CEPGP_Info.Raid.Roster[i][1], --Name
 			[2] = CEPGP_Info.Raid.Roster[i][2], --Class
 			[3] = CEPGP_Info.Raid.Roster[i][3], --Rank
 			[4] = CEPGP_Info.Raid.Roster[i][4], --RankIndex
-			[5] = (CEPGP_Info.Guild.Roster[name][9] and -1 or EP),
-			[6] = (CEPGP_Info.Guild.Roster[name][9] and -1 or GP),
-			[7] = (CEPGP_Info.Guild.Roster[name][9] and -1 or math.floor((EP/GP)*100)/100),
-			[8] = CEPGP_Info.Raid.Roster[i][8],  --Class in English
-			[9] = excluded
+			[5] = CEPGP_Info.Raid.Roster[i][5], --EP
+			[6] = CEPGP_Info.Raid.Roster[i][6], --GP
+			[7] = CEPGP_Info.Raid.Roster[i][7], --PR
+			[8] = CEPGP_Info.Raid.Roster[i][8]  --Class in English
 		};
 		
 	end
@@ -348,20 +411,14 @@ function CEPGP_UpdateRaidScrollBar()
 		if CEPGP_Info.LastRun.RaidSB ~= call or #tempTable ~= #CEPGP_Info.Raid.Roster then
 			return;
 		end
-		local EPcolour, EP, GP, PR;
-		EP = (tempTable[i][5] == -1 and "Excluded" or tempTable[i][5]);
-		GP = (tempTable[i][6] == -1 and "Excluded" or tempTable[i][6]);
-		PR = (tempTable[i][7] == -1 and "Excluded" or tempTable[i][7]);
-		local frame;
+		
 		if not _G["RaidButton" .. i] then
-			frame = CreateFrame('Button', "RaidButton" .. i, _G["CEPGP_raid_scrollframe_container"], "RaidButtonTemplate");
+			local frame = CreateFrame('Button', "RaidButton" .. i, _G["CEPGP_raid_scrollframe_container"], "RaidButtonTemplate");
 			if i > 1 then
 				_G["RaidButton" .. i]:SetPoint("TOPLEFT", _G["RaidButton" .. i-1], "BOTTOMLEFT", 0, -2);
 			else
 				_G["RaidButton" .. i]:SetPoint("TOPLEFT", _G["CEPGP_raid_scrollframe_container"], "TOPLEFT", 0, -10);
 			end
-		else
-			frame = _G["RaidButton" .. i];
 		end
 		local colour = CEPGP_Info.ClassColours[string.upper(tempTable[i][8])];
 		if not colour then
@@ -371,8 +428,6 @@ function CEPGP_UpdateRaidScrollBar()
 			b = 1
 		};
 		end
-		
-		frame:SetAttribute("excluded", (tempTable[i][9] and true or false));
 		_G["RaidButton" .. i]:Show();
 		_G["RaidButton" .. i .. "Info"]:SetText(tempTable[i][1]);
 		_G["RaidButton" .. i .. "Info"]:SetTextColor(colour.r, colour.g, colour.b);
@@ -380,26 +435,18 @@ function CEPGP_UpdateRaidScrollBar()
 		_G["RaidButton" .. i .. "Class"]:SetTextColor(colour.r, colour.g, colour.b);
 		_G["RaidButton" .. i .. "Rank"]:SetText(tempTable[i][3]);
 		_G["RaidButton" .. i .. "Rank"]:SetTextColor(colour.r, colour.g, colour.b);
-		_G["RaidButton" .. i .. "EP"]:SetText(EP);		
-		_G["RaidButton" .. i .. "GP"]:SetText(GP);
-		_G["RaidButton" .. i .. "PR"]:SetText(PR);
-		
-		if tempTable[i][9] then
-			_G["RaidButton" .. i .. "EP"]:SetTextColor(1, 0, 0);
-			_G["RaidButton" .. i .. "GP"]:SetTextColor(1, 0, 0);
-			_G["RaidButton" .. i .. "PR"]:SetTextColor(1, 0, 0);
-		else
-			_G["RaidButton" .. i .. "EP"]:SetTextColor(colour.r, colour.g, colour.b);
-			_G["RaidButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
-			_G["RaidButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
-		end		
+		_G["RaidButton" .. i .. "EP"]:SetText(tempTable[i][5]);
+		_G["RaidButton" .. i .. "EP"]:SetTextColor(colour.r, colour.g, colour.b);
+		_G["RaidButton" .. i .. "GP"]:SetText(tempTable[i][6]);
+		_G["RaidButton" .. i .. "GP"]:SetTextColor(colour.r, colour.g, colour.b);
+		_G["RaidButton" .. i .. "PR"]:SetText(string.format("%.2f", tempTable[i][7]));
+		_G["RaidButton" .. i .. "PR"]:SetTextColor(colour.r, colour.g, colour.b);
 	end
 end
 
 function CEPGP_UpdateVersionScrollBar()
 	CEPGP_Info.LastRun.VersionSB = GetTime();
 	local call = CEPGP_Info.LastRun.VersionSB;
-	local search = CEPGP_Info.Version.ListSearch;
 	local name, classFile, class, colour, version;
 	local showOffline = CEPGP_version:GetAttribute("offline");
 	local tempTable = {};
@@ -407,38 +454,25 @@ function CEPGP_UpdateVersionScrollBar()
 	for _, child in ipairs(kids) do
 		child:Hide();
 	end
-	
-	local function IsRaidMember(player)
-		if call ~= CEPGP_Info.LastRun.VersionSB then return; end
-		if not UnitInParty("player") and not IsInRaid() then return; end
-		for i = 1, #CEPGP_Info.Raid.Roster do
-			if CEPGP_Info.Raid.Roster[i][1] == player then
-				return true;
-			end
-		end
-		
-		return false;
-	end
-	
-	local function IsGuildMember(player)
-		if not IsInGuild() then return; end
-				
-		if CEPGP_Info.Guild.Roster[player] then
-			return true;
-		end
-	end
-		
-	for name, data in pairs(CEPGP_Info.Version.List) do
-		if data[1] ~= "Offline" or (showOffline and data[1] == "Offline") then
-			if search == "RAID" and IsRaidMember(name) or search == "GUILD" and IsGuildMember(name) then	--Nested these statements for efficiency sake
-				local entry = {
-					[1] = name,
-					[2] = data[1],
-					[3] = data[2],
-					[4] = data[3]
+	if showOffline == "false" then
+		for i = 1, #CEPGP_Info.Version.List do
+			if CEPGP_Info.Version.List[i][2] ~= "Offline" then
+				tempTable[#tempTable+1] = {
+					[1] = CEPGP_Info.Version.List[i][1],
+					[2] = CEPGP_Info.Version.List[i][2],
+					[3] = CEPGP_Info.Version.List[i][3],
+					[4] = CEPGP_Info.Version.List[i][4]
 				};
-				table.insert(tempTable, entry);
 			end
+		end
+	else
+		for i = 1, #CEPGP_Info.Version.List do
+			tempTable[i] = {
+				[1] = CEPGP_Info.Version.List[i][1],
+				[2] = CEPGP_Info.Version.List[i][2],
+				[3] = CEPGP_Info.Version.List[i][3],
+				[4] = CEPGP_Info.Version.List[i][4]
+			};
 		end
 	end
 	
@@ -456,7 +490,7 @@ function CEPGP_UpdateVersionScrollBar()
 			end
 		end
 		_G["versionButton" .. i]:Show();
-		if search == "GUILD" then
+		if CEPGP_Info.Version.ListSearch == "GUILD" then
 			local name = tempTable[i][1];
 			local classFile = tempTable[i][4];
 			local colour = CEPGP_Info.ClassColours[classFile];
@@ -504,7 +538,7 @@ function CEPGP_UpdateOverrideScrollBar()
 	for _, child in ipairs(kids) do
 		child:Hide();
 	end
-	for k, v in pairs(CEPGP.Overrides) do
+	for k, v in pairs(OVERRIDE_INDEX) do
 		local name = GetItemInfo(k);
 		if name then
 			table.insert(items, name);
@@ -518,7 +552,7 @@ function CEPGP_UpdateOverrideScrollBar()
 	for i, v in ipairs(items) do
 		tempTable[#tempTable+1] = {
 			[1] = compTable[v],
-			[2] = CEPGP.Overrides[compTable[v]]
+			[2] = OVERRIDE_INDEX[compTable[v]]
 		}
 	end
 	for i = 1, #tempTable do
@@ -549,8 +583,8 @@ function CEPGP_UpdateTrafficScrollBar()
 	local results = {};
 	local matches = 1;
 	
-	for i = 1, #CEPGP.Traffic do
-		local name, issuer, action, EPB, EPA, GPB, GPA, item, tStamp, ID, GUID = CEPGP.Traffic[i][1] or "", CEPGP.Traffic[i][2] or "", CEPGP.Traffic[i][3] or "", CEPGP.Traffic[i][4] or "", CEPGP.Traffic[i][5] or "", CEPGP.Traffic[i][6] or "", CEPGP.Traffic[i][7] or "", CEPGP.Traffic[i][8] or "", CEPGP.Traffic[i][9], CEPGP.Traffic[i][10], CEPGP.Traffic[i][11];
+	for i = 1, #TRAFFIC do
+		local name, issuer, action, EPB, EPA, GPB, GPA, item, tStamp, ID, GUID = TRAFFIC[i][1] or "", TRAFFIC[i][2] or "", TRAFFIC[i][3] or "", TRAFFIC[i][4] or "", TRAFFIC[i][5] or "", TRAFFIC[i][6] or "", TRAFFIC[i][7] or "", TRAFFIC[i][8] or "", TRAFFIC[i][9], TRAFFIC[i][10], TRAFFIC[i][11];
 		if not tStamp then
 			tStamp = "";
 		end
@@ -599,7 +633,7 @@ function CEPGP_UpdateTrafficScrollBar()
 		table.insert(temp, results[i]);
 	end
 	results = {};
-	for i = CEPGP_Info.TrafficScope, math.min(CEPGP_Info.TrafficScope+499, #CEPGP.Traffic) do
+	for i = CEPGP_Info.TrafficScope, math.min(CEPGP_Info.TrafficScope+499, #TRAFFIC) do
 		table.insert(results, temp[i]);
 	end
 	temp = {};
@@ -607,7 +641,7 @@ function CEPGP_UpdateTrafficScrollBar()
 		table.insert(temp, results[i]);
 	end
 	results = temp;
-	CEPGP_traffic_display:SetText("Showing Entries: " .. CEPGP_Info.TrafficScope .. " - " .. math.min(CEPGP_Info.TrafficScope+499, #CEPGP.Traffic));
+	CEPGP_traffic_display:SetText("Showing Entries: " .. CEPGP_Info.TrafficScope .. " - " .. math.min(CEPGP_Info.TrafficScope+499, #TRAFFIC));
 	CEPGP_traffic_display:SetPoint("BOTTOMRIGHT", -25, 20);
 	local i = #results;
 	
@@ -729,7 +763,7 @@ function CEPGP_UpdateStandbyScrollBar()
 		local index = CEPGP_getIndex(name);
 		local EP, GP = CEPGP_getEPGP(name, index);
 		if not EP then EP = 0; end
-		if not GP then GP = CEPGP.GP.Min; end
+		if not GP then GP = BASEGP; end
 		if name and index then
 			_, _, _, _, _, _, _, _, online = GetGuildRosterInfo(index);
 		else
@@ -802,17 +836,19 @@ function CEPGP_UpdateAttendanceScrollBar()
 	local sbCount = 1;
 	local count = 1;
 	if CEPGP_Info.Attendance.SelectedSnapshot then 
-		size = #CEPGP.Attendance[CEPGP_Info.Attendance.SelectedSnapshot]-1;
+		size = #CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot]-1;
+	--else
+		--size = CEPGP_ntgetn(CEPGP_Info.Guild.Roster)-CEPGP_Info.NumExcluded;
 	end
 	if CEPGP_Info.Attendance.SelectedSnapshot then
 		for i = 1, size do
 			local standby = false;
 			if CEPGP_Info.Attendance.SelectedSnapshot then
-				if type(CEPGP.Attendance[CEPGP_Info.Attendance.SelectedSnapshot][i+1]) == "table" then
-					name = CEPGP.Attendance[CEPGP_Info.Attendance.SelectedSnapshot][i+1][1];
-					standby = CEPGP.Attendance[CEPGP_Info.Attendance.SelectedSnapshot][i+1][2];
+				if type(CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1]) == "table" then
+					name = CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1][1];
+					standby = CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1][2];
 				else
-					name = CEPGP.Attendance[CEPGP_Info.Attendance.SelectedSnapshot][i+1];
+					name = CEPGP_raid_logs[CEPGP_Info.Attendance.SelectedSnapshot][i+1];
 				end
 			else
 				name = CEPGP_indexToName(i);
@@ -923,8 +959,8 @@ function CEPGP_UpdateAttendanceScrollBar()
 		_G["CEPGP_attendance_standby_text"]:Hide();
 	end
 	local totals = {CEPGP_calcAttIntervals()};
-	if #CEPGP.Attendance then
-		_G["CEPGP_attendance_header_total"]:SetText("Total Snapshots Recorded: " .. #CEPGP.Attendance);
+	if #CEPGP_raid_logs then
+		_G["CEPGP_attendance_header_total"]:SetText("Total Snapshots Recorded: " .. #CEPGP_raid_logs);
 	else
 		_G["CEPGP_attendance_header_total"]:SetText("Total Snapshots Recorded: 0");
 	end
@@ -932,10 +968,10 @@ function CEPGP_UpdateAttendanceScrollBar()
 	size = #tempTable;
 	for i = 1, size do
 		local avg, colour;
-		if #CEPGP.Attendance == 0 then
+		if #CEPGP_raid_logs == 0 then
 			avg = 1;
 		else
-			avg = tempTable[i][4]/#CEPGP.Attendance;
+			avg = tempTable[i][4]/#CEPGP_raid_logs;
 			avg = math.floor(avg*100)/100;
 		end
 		if tempTable[i][10] then
@@ -1009,7 +1045,7 @@ function CEPGP_UpdateAttendanceScrollBar()
 	size = #standbyTable;
 	for i = 1, size do
 		local colour;
-		local avg = standbyTable[i][4]/#CEPGP.Attendance;
+		local avg = standbyTable[i][4]/#CEPGP_raid_logs;
 		avg = math.floor(avg*100)/100;
 		if standbyTable[i][10] then
 			colour = CEPGP_Info.ClassColours[standbyTable[i][10]];
@@ -1215,6 +1251,5 @@ function CEPGP_UpdateLogScrollBar()
 		str = str .. date("%H:%M:%S", absTime) .. ": Source: " .. source .. ", Scope: " .. destination .. ", Channel: " .. channel .. ", State: " .. state .. "\nContent: " .. content .. "\n\n";
 	end
 	CEPGP_log_container:SetText(str);
-	CEPGP_log_num:SetText("Showing the " .. #logs .. " most recent messages");
 end
 
