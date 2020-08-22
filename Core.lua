@@ -866,29 +866,25 @@ function CEPGP_addStandbyEP(amount, boss, msg)
 			local mains = {};
 			
 			local roster = {};
-			local standbyRoster = {};
 			
-			for index, data in ipairs(CEPGP.Standby.Roster) do
-				standbyRoster[index] = data;
-			end
 			for _, v in pairs(CEPGP_Info.Raid.Roster) do
 				roster[v[1]] = "";
 			end
 			
 			C_Timer.After(0.1, function()
+				local temp = {};
 				if CEPGP.Standby.ByRank then
 					local inRaid = false;
+					for k, _ in pairs(CEPGP_Info.Guild.Roster) do
+						table.insert(temp, k);
+					end
 					C_Timer.NewTicker(0.0001, function()
 						i = i + 1;
-						local name = standbyRoster[i];
+						local name = temp[i];
 						inRaid = false;
 						
-						if roster[name] then
-							inRaid = true;
-						end
-						
-						for _, data in ipairs(standbyRoster) do
-							if roster[data[1]] then		--	character name
+						for _, v in ipairs(CEPGP_Info.Raid.Roster) do
+							if name == v[1] then
 								inRaid = true;
 								break;
 							end
@@ -896,8 +892,13 @@ function CEPGP_addStandbyEP(amount, boss, msg)
 						
 						if not inRaid then
 							local main = CEPGP_getMain(name);
-							if main then
-								if not roster[main] and not mains[main] then
+							if main then							
+								for v, _ in pairs(mains) do
+									if v == main then
+										return;
+									end
+								end
+								if not roster[main] then
 									mains[main] = name;
 								end
 							else
@@ -936,24 +937,15 @@ function CEPGP_addStandbyEP(amount, boss, msg)
 								end
 							end
 						end
-						if i == #standbyRoster then
-							C_Timer.After(2, function()
-								for main, alt in pairs(mains) do
-									if #mains[main] == 0 then
-										CEPGP_syncAltStandings(main);
-									else
-										CEPGP_addAltEPGP(amount, 0, alt, main);
-									end
-								end
-							end);
+						if i == #temp then
 							update();
 						end
 					end, #temp);
 					
-				elseif CEPGP.Standby.Manual and #standbyRoster > 0 then
+				elseif CEPGP.Standby.Manual and #CEPGP.Standby.Roster > 0 then
 					C_Timer.NewTicker(0.0001, function()
 						i = i + 1;
-						local name = standbyRoster[i][1];
+						local name = CEPGP.Standby.Roster[i][1];
 						local main = CEPGP_getMain(name);
 						local index = CEPGP_getIndex(name);
 						local online = select(9, GetGuildRosterInfo(index));
@@ -961,7 +953,12 @@ function CEPGP_addStandbyEP(amount, boss, msg)
 						if online or STANDBYOFFLINE then
 							local EP,GP = CEPGP_getEPGP(name, index);				
 							if main then
-								if not roster[main] and not mains[main] then
+								for v, _ in pairs(mains) do
+									if v == main then
+										return;
+									end
+								end
+								if not roster[main] then
 									mains[main] = name;
 								end
 							else
@@ -986,7 +983,7 @@ function CEPGP_addStandbyEP(amount, boss, msg)
 								end
 							end
 						end
-						if i == #standbyRoster then
+						if i == #CEPGP.Standby.Roster then
 							C_Timer.After(2, function()
 								for main, alt in pairs(mains) do
 									if #mains[main] == 0 then
@@ -998,7 +995,7 @@ function CEPGP_addStandbyEP(amount, boss, msg)
 							end);
 							update();
 						end
-					end, #standbyRoster);
+					end, #CEPGP.Standby.Roster);
 				end
 			end);
 		end);

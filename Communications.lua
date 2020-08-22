@@ -3,9 +3,6 @@ local L = CEPGP_Locale:GetLocale("CEPGP")
 function CEPGP_IncAddonMsg(message, sender, channel)
 	if sender ~= UnitName("player") then
 		table.insert(CEPGP_Info.Logs, {time(), "received", sender, UnitName("player"), message, channel});	--	os.time, time since pc turned on (useful for millisecond precision)
-		if #CEPGP_Info.Logs >= 500 then
-			table.remove(CEPGP_Info.Logs, 1);
-		end
 	end
 	
 	local args = CEPGP_split(message, ";"); -- The broken down message, delimited by semi-colons
@@ -1025,25 +1022,16 @@ function CEPGP_SendAddonMsg(message, channel, player, logged)
 			if status == "abandoned" then
 				callback._remainingIterations = 1;
 				table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
-				if #CEPGP_Info.Logs >= 500 then
-					table.remove(CEPGP_Info.Logs, 1);
-				end
 				return;
 			end
 			if hasSent() then
 				callback._remainingIterations = 1;
 				status = "sent";
 				table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
-				if #CEPGP_Info.Logs >= 500 then
-					table.remove(CEPGP_Info.Logs, 1);
-				end
 			else
 				callback._remainingIterations = 2;
 				status = "attempt";
 				table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
-				if #CEPGP_Info.Logs >= 500 then
-					table.remove(CEPGP_Info.Logs, 1);
-				end
 				send();
 			end
 		end, 1);
