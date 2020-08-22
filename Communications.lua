@@ -1013,9 +1013,6 @@ function CEPGP_SendAddonMsg(message, channel, player, logged)
 	
 	if channel ~= "WHISPER" then
 		table.insert(CEPGP_Info.MessageStack, message);
-	else
-		status = "whisper";
-		table.insert(CEPGP_Info.Logs, {time(), status, UnitName("player"), player, message, channel});
 	end
 	
 	send();

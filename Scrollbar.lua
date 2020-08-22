@@ -1247,7 +1247,7 @@ function CEPGP_UpdateLogScrollBar()
 		local content =			logs[i][5] or "|cFFFF0000nil|r";
 		local channel = 		logs[i][6] or "|cFFFF0000nil|r";
 
-		local state = (msgType == "attempt" and "|cFFF5B342Reattempting|r") or (msgType == "abandoned" and "|cFFFF0000Abandoned|r")	or (msgType == "received" and "|cFF03A9FCReceived|r") or (msgType == "sent" and "|cFF00FF00Sent|r") or (msgType == "whisper" and "|cFF7A00ABUntraceable|r");
+		local state = (msgType == "attempt" and "|cFFF5B342Reattempting|r") or (msgType == "abandoned" and "|cFFFF0000Abandoned|r")	or (msgType == "received" and "|cFF03A9FCReceived|r") or (msgType == "sent" and "|cFF00FF00Sent|r");
 		str = str .. date("%H:%M:%S", absTime) .. ": Source: " .. source .. ", Scope: " .. destination .. ", Channel: " .. channel .. ", State: " .. state .. "\nContent: " .. content .. "\n\n";
 	end
 	CEPGP_log_container:SetText(str);
