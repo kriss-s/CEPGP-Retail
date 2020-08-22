@@ -9542,19 +9542,15 @@
 								if not CEPGP_isNumber(value) then
 									CEPGP_print("Base GP must contain numbers only", true);
 									self:SetText(tostring(BASEGP));
-									return;
 								elseif value == "" then
 									CEPGP_print("Base GP cannot be blank", true);
 									self:SetText(tostring(BASEGP));
-									return;
 								elseif tonumber(self:GetText()) == 0 then
 									CEPGP_print("Base GP cannot be 0", true);
 									self:SetText(tostring(BASEGP));
-									return;
 								elseif 0 > tonumber(self:GetText()) then
 									CEPGP_print("Base GP must be a positive number", true);
 									self:SetText(tostring(BASEGP));
-									return;
 								elseif BASEGP == tonumber(value) then
 									return;
 								end
