@@ -283,10 +283,9 @@ function CEPGP_OnEvent(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, ar
 	
 	elseif (event == "CHAT_MSG_ADDON") or (event == "CHAT_MSG_ADDON_LOGGED") then
 		if (arg1 == "CEPGP")then
-			local message = arg2;
 			local channel = arg3;
 			local player = arg5;
-			CEPGP_IncAddonMsg(message, arg5, arg3);
+			CEPGP_IncAddonMsg(arg2, arg5, arg3);
 		end
 		return;
 	end
